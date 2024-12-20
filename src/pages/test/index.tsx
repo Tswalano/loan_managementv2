@@ -62,7 +62,7 @@ const BalanceOperationsUI = () => {
                 bankName: `${acc.account} Test Bank`,
                 accountName: `${acc.account} Account`,
                 accountStatus: 'ACTIVE',
-                type: acc.type
+                type: 'BANK'
             };
             await createBalance(newBalance);
         }
@@ -77,7 +77,6 @@ const BalanceOperationsUI = () => {
 
         const newExpense: NewTransaction = {
             date: new Date(),
-            userId: user.id,
             type: 'LOAN_DISBURSEMENT',
             description: 'Loan Disbursement',
             fromBalanceId: selectedAccount,
@@ -110,11 +109,9 @@ const BalanceOperationsUI = () => {
             await recordIncome({
                 amount: amount,
                 category,
-                userId: user.id,
                 description,
                 reference: generateReferenceNumber("INCOME"),
                 toBalanceId: selectedAccount,
-                type: 'INCOME',
                 date: new Date(),
                 // fromBalanceId: selectedAccount
             });
@@ -133,17 +130,21 @@ const BalanceOperationsUI = () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('No user found');
 
+        // amount: parseFloat(amount.toString()),
+        // description: 'Transfer between accounts',
+        // reference: generateReferenceNumber("LOAN_PAYMENT"),
+        // fromBalanceId: selectedAccount,
+        // toBalanceId: targetAccount,
+        // type: 'LOAN_PAYMENT',
+        // category: 'LOAN_PAYMENT',
+        // date: new Date(),
+        // userId: user.id
+
         try {
             await transferBetweenAccounts({
-                amount: amount,
-                description: 'Transfer between accounts',
-                reference: generateReferenceNumber("LOAN_PAYMENT"),
+                amount: 0,
                 fromBalanceId: selectedAccount,
-                toBalanceId: targetAccount,
-                type: 'LOAN_PAYMENT',
-                category: 'LOAN_PAYMENT',
-                date: new Date(),
-                userId: user.id
+                toBalanceId: targetAccount
             });
             setAmount('');
             setSelectedAccount('');

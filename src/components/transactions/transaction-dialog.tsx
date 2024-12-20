@@ -57,7 +57,7 @@ const ViewTransactionDialog = ({ transaction, open, onClose }: ViewTransactionDi
                                         : 'text-red-600 dark:text-red-400'
                                         }`}
                                 >
-                                    {formatCurrency(parseFloat(transaction.amount))}
+                                    {formatCurrency(transaction.amount)}
                                 </p>
                             </div>
                             {/* Icon based on transaction type */}
