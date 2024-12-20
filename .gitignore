@@ -26,3 +26,6 @@ dist-ssr
 # ENV files
 .env
 *.env
+
+
+# others
