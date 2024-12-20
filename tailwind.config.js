@@ -5,12 +5,18 @@ import tailwindcssAnimate from "tailwindcss-animate";
 export default {
 	plugins: [tailwindcssAnimate],
 	darkMode: ["class"],
+	// content: [
+	// 	'src/pages/auth/login.tsx',
+	// 	'./pages/**/*.{ts,tsx}',
+	// 	'./Components/**/*.{ts,tsx}',
+	// 	'./app/**/*.{ts,tsx}',
+	// 	'./src/**/*.{ts,tsx}',
+	// ],
 	content: [
-		'	src/pages/auth/login.tsx',
-		'./pages/**/*.{ts,tsx}',
-		'./components/**/*.{ts,tsx}',
-		'./app/**/*.{ts,tsx}',
-		'./src/**/*.{ts,tsx}',
+		"./Components/**/*.{js,ts,jsx,tsx}",
+		"./src/**/*.{js,ts,jsx,tsx,mdx}",
+		"./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+		"./src/app/**/*.{js,ts,jsx,tsx,mdx}",
 	],
 	prefix: "",
 	theme: {
