@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Card,
     CardContent,
@@ -9,6 +9,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
     Table,
     TableBody,
     TableCell,
@@ -16,14 +23,13 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Download, Calendar, Loader2 } from 'lucide-react';
+import { Plus, Search, Download, Calendar, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatCurrency, formatShortDate, generateReferenceNumber, truncateText } from '@/lib/utils/formatters';
 import type { Transaction, LoanTransactionType, NewTransaction } from '@/types';
-import ErrorComponent from '@/components/error/error-component';
 import ViewTransactionDialog from '@/components/transactions/transaction-dialog';
 import TransactionForm from '@/components/transactions/transaction-form';
 import { useBalanceOperations } from '@/hooks/useBalanceOperations';
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/hooks/use-toast";
 
 export default function TransactionsPage() {
     const { toast } = useToast();
@@ -31,6 +37,11 @@ export default function TransactionsPage() {
     const [selectedType, setSelectedType] = useState<LoanTransactionType | 'ALL'>('ALL');
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [viewTransaction, setViewTransaction] = useState<Transaction | null>(null);
+
+    // Pagination and row limit state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const rowOptions = [10, 20, 50];
 
     const {
         loading,
@@ -40,13 +51,22 @@ export default function TransactionsPage() {
         fetchTransactions,
         setLoading,
         recordExpense,
-        recordTransaction
+        recordTransaction,
     } = useBalanceOperations();
+
+    useEffect(() => {
+        if (error) {
+            toast({
+                title: "Error Loading Transactions",
+                description: error.toString(),
+                variant: "destructive",
+            });
+        }
+    }, [error, toast]);
 
     const handleTransactionCreate = async (formData: NewTransaction) => {
         setLoading(true);
         try {
-
             if (formData.type === 'EXPENSE') {
                 const reference = generateReferenceNumber('EXPENSE');
                 await recordExpense({
@@ -81,7 +101,7 @@ export default function TransactionsPage() {
             });
             setIsNewTransactionOpen(false);
         } catch (error) {
-            console.error('Transaction creation failed:', error);
+            console.log("Error,", error)
             toast({
                 title: "Error",
                 description: "Failed to create transaction. Please try again.",
@@ -114,19 +134,12 @@ export default function TransactionsPage() {
         return matchesType && matchesSearch;
     });
 
-    if (error) {
-        return (
-            <ErrorComponent
-                title="Error Loading Transactions"
-                message={error.toString().toUpperCase()}
-                onRetry={fetchTransactions} isOpen={false} onClose={function (): void {
-                    throw new Error('Function not implemented.');
-                }}
-            />
-        );
-    }
+    // Pagination calculations
+    const totalPages = Math.ceil(filteredTransactions.length / rowsPerPage);
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const currentTransactions = filteredTransactions.slice(startIndex, endIndex);
 
-    // Empty state component
     const EmptyState = () => (
         <div className="p-8">
             <div className="flex justify-between items-center mb-8">
@@ -171,7 +184,7 @@ export default function TransactionsPage() {
 
     if (loading && transactions.length === 0) {
         return (
-            <div className="flex items-center justify-center h-[50vh]">
+            <div className="flex items-center justify-center h-screen">
                 <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
             </div>
         );
@@ -185,7 +198,7 @@ export default function TransactionsPage() {
                     balances={balances}
                     open={isNewTransactionOpen}
                     onClose={() => setIsNewTransactionOpen(false)}
-                    onSubmit={(data: NewTransaction) => handleTransactionCreate({ ...data })}
+                    onSubmit={handleTransactionCreate}
                 />
             </>
         );
@@ -238,9 +251,27 @@ export default function TransactionsPage() {
                         <div>
                             <CardTitle>All Transactions</CardTitle>
                             <CardDescription>
-                                Showing {filteredTransactions.length} transactions
+                                Showing {startIndex + 1} to {Math.min(endIndex, filteredTransactions.length)} of {filteredTransactions.length} transactions
                             </CardDescription>
                         </div>
+                        <Select
+                            value={rowsPerPage.toString()}
+                            onValueChange={(value) => {
+                                setRowsPerPage(Number(value));
+                                setCurrentPage(1);
+                            }}
+                        >
+                            <SelectTrigger className="w-32">
+                                <SelectValue placeholder="Rows per page" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {rowOptions.map(option => (
+                                    <SelectItem key={option} value={option.toString()}>
+                                        {option} rows
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="mt-4 flex flex-col sm:flex-row gap-4">
                         <div className="relative flex-1">
@@ -248,7 +279,10 @@ export default function TransactionsPage() {
                             <Input
                                 placeholder="Search transactions..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value);
+                                    setCurrentPage(1);
+                                }}
                                 className="pl-10"
                             />
                         </div>
@@ -261,7 +295,10 @@ export default function TransactionsPage() {
                                     className={selectedType === type ?
                                         "bg-emerald-600 hover:bg-emerald-700 text-white" :
                                         "bg-white dark:bg-gray-800"}
-                                    onClick={() => setSelectedType(type)}
+                                    onClick={() => {
+                                        setSelectedType(type);
+                                        setCurrentPage(1);
+                                    }}
                                 >
                                     {type.replace('_', ' ')}
                                 </Button>
@@ -270,7 +307,7 @@ export default function TransactionsPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700">
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-gray-50 dark:bg-gray-800/50">
@@ -291,7 +328,7 @@ export default function TransactionsPage() {
                                             </div>
                                         </TableCell>
                                     </TableRow>
-                                ) : filteredTransactions.length === 0 ? (
+                                ) : currentTransactions.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={5} className="text-center py-8">
                                             <div className="text-gray-500 dark:text-gray-400">
@@ -300,7 +337,7 @@ export default function TransactionsPage() {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    filteredTransactions.map((transaction) => (
+                                    currentTransactions.map((transaction) => (
                                         <TableRow
                                             key={transaction.id}
                                             className="hover:bg-gray-50 dark:hover:bg-gray-800/50"
@@ -343,6 +380,61 @@ export default function TransactionsPage() {
                             </TableBody>
                         </Table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {filteredTransactions.length > 0 && (
+                        <div className="flex items-center justify-between mt-4">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                                Page {currentPage} of {totalPages}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                    className="bg-white dark:bg-gray-800"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                    let pageNum;
+                                    if (totalPages <= 5) {
+                                        pageNum = i + 1;
+                                    } else if (currentPage <= 3) {
+                                        pageNum = i + 1;
+                                    } else if (currentPage >= totalPages - 2) {
+                                        pageNum = totalPages - 4 + i;
+                                    } else {
+                                        pageNum = currentPage - 2 + i;
+                                    }
+
+                                    return (
+                                        <Button
+                                            key={pageNum}
+                                            variant={currentPage === pageNum ? "default" : "outline"}
+                                            size="sm"
+                                            onClick={() => setCurrentPage(pageNum)}
+                                            className={currentPage === pageNum ?
+                                                "bg-emerald-600 hover:bg-emerald-700 text-white" :
+                                                "bg-white dark:bg-gray-800"}
+                                        >
+                                            {pageNum}
+                                        </Button>
+                                    );
+                                })}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="bg-white dark:bg-gray-800"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 

@@ -94,8 +94,8 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ metrics }) => 
                     description="Based on active loans"
                 />
                 <MetricCard
-                    title="Active Loans"
-                    value={metrics.loanMetrics.totalActiveLoans}
+                    title="Total Bank Balance"
+                    value={metrics.bankBalance}
                     icon={<Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
                     trend={{
                         value: parseFloat(growthRate.toFixed(2)),

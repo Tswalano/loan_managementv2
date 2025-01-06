@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { balances } from '../lib/db/schema';
 
 interface TransactionData {
     month: string;
@@ -28,6 +29,7 @@ export interface TransactionMetrics {
     monthlyData: TransactionData[];
     typeBreakdown: TypeBreakdown[];
     loanMetrics: LoanMetrics;
+    bankBalance: number;
     loanTrends: {
         month: string;
         disbursements: number;
@@ -41,6 +43,7 @@ export function useTransactionMetrics() {
     const [metrics, setMetrics] = useState<TransactionMetrics>({
         monthlyData: [],
         typeBreakdown: [],
+        bankBalance: 0,
         loanMetrics: {
             totalActiveLoans: 0,
             totalLoanAmount: 0,
@@ -79,6 +82,8 @@ export function useTransactionMetrics() {
 
                 if (loansError) throw loansError;
 
+                const {data: balances} = await supabase.from('balances').select('*')
+
                 // Fetch loan trends
                 const { data: monthlyLoans, error: trendError } = await supabase
                     .from('loans')
@@ -93,8 +98,11 @@ export function useTransactionMetrics() {
                 const typeBreakdown = processTypeBreakdown(monthlyTransactions);
                 const loanMetrics = processLoanMetrics(activeLoans);
                 const loanTrends = processLoanTrends(monthlyLoans, monthlyTransactions);
+                const totalBalance = balances?.reduce((sum, balance) => sum + Number(balance.currentBalance || 0), 0)
+                
 
                 setMetrics({
+                    bankBalance: totalBalance,
                     monthlyData: monthlyMetrics,
                     typeBreakdown,
                     loanMetrics,
