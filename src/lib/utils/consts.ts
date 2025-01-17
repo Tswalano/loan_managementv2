@@ -1,0 +1,1 @@
+export const BACKEND_API_URL = "https://8bp49x30ql.execute-api.af-south-1.amazonaws.com/prod"

@@ -22,13 +22,14 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { ThemeToggle } from '../theme-toggle';
+import { supabase } from '@/lib/supabase';
 // import { supabase } from '@/lib/supabase';
 
 const navigation = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Loans', href: '/loans', icon: PiggyBank },
-    { name: 'Transactions', href: '/transactions', icon: Receipt },
-    { name: 'Bank Accounts', href: '/bank-accounts', icon: Banknote },
+    { name: 'Dashboard', href: '/app', icon: LayoutDashboard },
+    { name: 'Loans', href: '/app/loans', icon: PiggyBank },
+    { name: 'Transactions', href: '/app/transactions', icon: Receipt },
+    { name: 'Bank Accounts', href: '/app/bank-accounts', icon: Banknote },
 ];
 
 export default function Navbar() {
@@ -38,12 +39,12 @@ export default function Navbar() {
     const isActive = (path: string) => location.pathname === path;
 
     const handleLogout = async () => {
-        // const { error } = await supabase.auth.signOut();
-        // if (error) {
-        //     console.error('Error during logout:', error.message);
-        // } else {
-            window.location.href = '/login';
-        // }
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            console.error('Error during logout:', error.message);
+        } else {
+            window.location.href = '/app/login';
+        }
     };
 
     return (
@@ -64,8 +65,8 @@ export default function Navbar() {
                                     key={item.name}
                                     to={item.href}
                                     className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${isActive(item.href)
-                                            ? 'text-emerald-600 dark:text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
-                                            : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 dark:text-gray-300 dark:hover:text-emerald-500 dark:hover:bg-emerald-900/20'
+                                        ? 'text-emerald-600 dark:text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                                        : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 dark:text-gray-300 dark:hover:text-emerald-500 dark:hover:bg-emerald-900/20'
                                         }`}
                                 >
                                     <item.icon className="h-4 w-4 mr-2" />
@@ -90,7 +91,7 @@ export default function Navbar() {
                                     <span className=''>Admin</span>
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuContent align="end" className="w-56 bg-gray-50 dark:bg-gray-900">
                                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem>
@@ -141,8 +142,8 @@ export default function Navbar() {
                                     key={item.name}
                                     to={item.href}
                                     className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${isActive(item.href)
-                                            ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-500'
-                                            : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 dark:text-gray-300 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-500'
+                                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-500'
+                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 dark:text-gray-300 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-500'
                                         }`}
                                     onClick={() => setIsMobileMenuOpen(false)}
                                 >

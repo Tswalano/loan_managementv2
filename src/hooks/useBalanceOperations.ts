@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Balance, NewTransaction, Transaction, Loan, NewBalance } from "@/types";
 import { generateReferenceNumber } from "../lib/utils/formatters";
+import useUserSession from "./useUserSession";
 
 export function useBalanceOperations() {
+    const { user } = useUserSession();
     const [balances, setBalances] = useState<Balance[]>([]);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loans, setLoans] = useState<Loan[]>([]);
@@ -35,7 +37,6 @@ export function useBalanceOperations() {
     const fetchBalances = async () => {
         try {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('No user found');
 
             const { data, error } = await supabase
@@ -58,7 +59,6 @@ export function useBalanceOperations() {
     const fetchTransactions = async () => {
         try {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('No user found');
 
             const { data, error } = await supabase
@@ -81,7 +81,6 @@ export function useBalanceOperations() {
     const fetchLoans = async () => {
         try {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('No user found');
 
             const { data, error } = await supabase
@@ -94,9 +93,6 @@ export function useBalanceOperations() {
                     `)
                 .eq('userId', user.id)
                 .order('createdAt', { ascending: false });
-
-            console.log('Fetched loans:', data);
-
 
             if (error) throw error;
             setLoans(data || []);
@@ -120,7 +116,6 @@ export function useBalanceOperations() {
     }) => {
         try {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('No user found');
 
             const newTransaction: Omit<NewTransaction, 'userId'> = {
@@ -168,7 +163,6 @@ export function useBalanceOperations() {
     }) => {
         try {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('No user found');
 
             // First, verify the loan exists and get its details
@@ -216,7 +210,6 @@ export function useBalanceOperations() {
     const recordTransaction = async (newTransaction: Omit<NewTransaction, 'userId'>) => {
         try {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('No user found');
 
             console.log("Creating transaction:", newTransaction);
@@ -275,7 +268,6 @@ export function useBalanceOperations() {
         try {
             setLoading(true);
 
-            const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('No user found');
 
             const transferTransaction: NewTransaction = {
@@ -311,7 +303,6 @@ export function useBalanceOperations() {
     const deleteBalance = async (balanceId: string) => {
         try {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('No user found');
             const { error } = await supabase
                 .from('balances')

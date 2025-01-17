@@ -2,6 +2,7 @@ import React from 'react';
 import { Download, Mail, Wallet, ArrowUpDown, LineChart, Shield, Star } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import Footer from '@/components/footer';
+import { useTheme } from '@/components/theme-provider';
 
 // Interface definitions
 interface Feature {
@@ -82,6 +83,9 @@ const MetricCard: React.FC<MetricCardProps> = ({ number, label }) => {
 };
 
 const LandingPage: React.FC = () => {
+
+    const { theme } = useTheme();
+
     const renderStars = (count: number): React.ReactNode[] => {
         return Array.from({ length: count }, (_, index) => (
             <Star key={index} className="w-5 h-5 text-yellow-400 fill-yellow-400" />
@@ -111,12 +115,12 @@ const LandingPage: React.FC = () => {
                     <div className="flex justify-between items-center">
                         <div className="text-2xl font-bold text-emerald-600">FinanceFlow</div>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-                            <button
-                                onClick={handleStartTrial}
+                            <a
+                                href="/app"
                                 className="px-4 py-2 bg-emerald-600 text-white rounded-lg"
                             >
                                 Get started
-                            </button>
+                            </a>
                             {/* Theme Toggle */}
                             <div className="">
                                 <ThemeToggle />
@@ -183,9 +187,9 @@ const LandingPage: React.FC = () => {
                     <div className="relative">
                         <div className="w-full h-[780px] rounded-lg overflow-hidden">
                             <img
-                                src="/dashboard_mockup.svg"
+                                src={theme === 'dark' ? '/dashboard-light.png' : '/dashboard.png'}
                                 alt="Dashboard preview"
-                                className="w-full h-full object-contain"
+                                className="w-full h-full max-w-full rounded-2xl"
                             />
                         </div>
                     </div>

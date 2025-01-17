@@ -78,9 +78,9 @@ const Footer: React.FC = () => {
                 {/* Bottom bar */}
                 <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
                     <div className="text-gray-400 text-sm">
-                      <a href="#" className="text-emerald-500 hover:text-emerald-400 transition-colors">
-                        <span className="font-semibold">Glenify Studios</span>
-                      </a>  © {year} FinanceFlow. All rights reserved.
+                        <a href="https://glenify.studio" className="text-emerald-500 hover:text-emerald-400 transition-colors">
+                            <span className="font-semibold">Glenify Studios</span>
+                        </a>  © {year} FinanceFlow. All rights reserved.
                     </div>
                     <div className="flex space-x-6">
                         <button className="text-gray-400 hover:text-emerald-500 text-sm">
