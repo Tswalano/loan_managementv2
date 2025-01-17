@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
-import { balances } from '../lib/db/schema';
 
 interface TransactionData {
     month: string;

@@ -40,11 +40,11 @@ export default function LoginPage() {
 
             if (error) throw error;
             console.log(data);
-            
+
             navigate(from, { replace: true });
         } catch (error: any) {
             console.log(error);
-            
+
             setError(error.message);
         } finally {
             setLoading(false);
@@ -70,7 +70,7 @@ export default function LoginPage() {
                                 </div>
                             </div>
                             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                                Loan Tracker
+                                FinanceFlow
                             </h1>
                         </div>
 
@@ -146,12 +146,13 @@ export default function LoginPage() {
                                     </Button>
                                     <p className="text-center text-sm text-gray-500 dark:text-gray-400">
                                         Don't have an account?{' '}
-                                        <button
+                                        <a
+                                            href="/request-access"
                                             type="button"
                                             className="text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium"
                                         >
-                                            Create an account
-                                        </button>
+                                            Request Access
+                                        </a>
                                     </p>
                                 </CardFooter>
                             </form>
@@ -187,7 +188,7 @@ export default function LoginPage() {
             <footer className="h-16 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
                 <div className="h-full flex items-center justify-center">
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        © {new Date().getFullYear()} Loan Tracker. All rights reserved.
+                        © {new Date().getFullYear()} FinanceFlow. All rights reserved.
                     </p>
                 </div>
             </footer>

@@ -14,13 +14,15 @@ import BalanceOperationsUI from './pages/test';
 import DashboardPage from './pages/dashboard';
 import { Toaster } from '@/components/ui/toaster';
 import AccountManagementPage from './pages/accounts';
+import LandingPage from './pages/landing';
+import RequestAccessPage from './pages/RequestAccess';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check active sessions and sets the user
+    // Check active sessions and set the user
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
@@ -42,12 +44,14 @@ function App() {
       <ThemeProvider defaultTheme="light" storageKey="loan-manager-theme">
         <Router>
           <Routes>
-            {/* Public route */}
+            {/* Public routes */}
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/request-access" element={<RequestAccessPage />} />
 
             {/* Protected routes */}
             <Route
-              path="/"
+              path="/app/*"
               element={
                 <ProtectedRoute>
                   <RootLayout />
@@ -59,12 +63,16 @@ function App() {
               <Route path="transactions" element={<TransactionsPage />} />
               <Route path="loans" element={<LoanSummaryPage />} />
               <Route path="bank-accounts" element={<AccountManagementPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              {/* Catch all route for /app/* */}
+              <Route path="*" element={<Navigate to="/app" replace />} />
             </Route>
+
+            {/* Catch all route */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <Toaster />
         </Router>
       </ThemeProvider>
-      <Toaster />
     </AuthContext.Provider>
   );
 }

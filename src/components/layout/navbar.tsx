@@ -55,7 +55,7 @@ export default function Navbar() {
                         <div className="flex-shrink-0">
                             <span className="flex items-center text-2xl font-bold text-emerald-600 dark:text-emerald-500">
                                 <PiggyBank className="h-6 w-6 mr-2" />
-                                Loan Tracker
+                                FinanceFlow
                             </span>
                         </div>
                         <div className="hidden md:flex md:space-x-1">
