@@ -114,7 +114,7 @@ const LandingPage: React.FC = () => {
                 <div className="container mx-auto px-4">
                     <div className="flex justify-between items-center">
                         <div className="text-2xl font-bold text-emerald-600">FinanceFlow</div>
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                             <a
                                 href="/app"
                                 className="px-4 py-2 bg-emerald-600 text-white rounded-lg"

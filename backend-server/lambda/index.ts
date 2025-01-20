@@ -6,9 +6,12 @@ import { Context as HonoContext } from 'hono';
 
 const app = new Hono();
 
+// check if prod or dev
+const isProd = process.env.NODE_ENV === 'production'
+
 // Add CORS middleware
 app.use('/*', cors({
-    origin: 'http://localhost:5173',
+    origin: ['http://localhost:5173', 'https://8bp49x30ql.execute-api.af-south-1.amazonaws.com'],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: [
         'Content-Type',
