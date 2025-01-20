@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { ThemeToggle } from '../theme-toggle';
-import { supabase } from '@/lib/supabase';
+import useUserSession from '@/hooks/useUserSession';
 // import { supabase } from '@/lib/supabase';
 
 const navigation = [
@@ -34,17 +34,19 @@ const navigation = [
 
 export default function Navbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const { clearSession } = useUserSession();
     const location = useLocation();
 
     const isActive = (path: string) => location.pathname === path;
 
     const handleLogout = async () => {
-        const { error } = await supabase.auth.signOut();
-        if (error) {
-            console.error('Error during logout:', error.message);
-        } else {
-            window.location.href = '/app/login';
-        }
+        // const { error } = await supabase.auth.signOut();
+        clearSession();
+        // if (error) {
+        //     console.error('Error during logout:', error.message);
+        // } else {
+        
+        // }
     };
 
     return (
@@ -85,7 +87,7 @@ export default function Navbar() {
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="ghost"
-                                    className="relative gap-2 hidden md:flex hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900 dark:hover:text-emerald-50"
+                                    className="relative gap-2 hidden md:flex hover:bg-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-500 dark:hover:text-emerald-50"
                                 >
                                     <UserCircle className="h-5 w-5" />
                                     <span className=''>Admin</span>
@@ -95,8 +97,10 @@ export default function Navbar() {
                                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem>
-                                    <Settings className="h-4 w-4 mr-2" />
-                                    Settings
+                                    <Link to="/app/settings" className="flex items-center">
+                                        <Settings className="h-5 w-5 mr-2" />
+                                        Settings
+                                    </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     className="text-red-600 dark:text-red-400"

@@ -7,7 +7,7 @@ import type { User } from '@supabase/supabase-js';
 interface SessionResponse {
     user: User;
     token?: string;
-    sessions?: any;
+    sessions?: unknown;
 }
 
 interface AuthError {
@@ -121,6 +121,7 @@ const useUserSession = () => {
         localStorage.removeItem(USER_STORAGE_KEY);
         setLocalUser(null);
         queryClient.removeQueries({ queryKey: SESSION_QUERY_KEY });
+        window.location.href = '/app/login';
     }, [queryClient]);
 
     const setSession = useCallback((token: string, user: User) => {

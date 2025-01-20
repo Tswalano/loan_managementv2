@@ -11,7 +11,7 @@ interface Feature {
     description: string;
 }
 
-interface FeatureCardProps extends Feature { }
+// Removed FeatureCardProps interface as it is equivalent to Feature
 
 interface MetricCardProps {
     number: string;
@@ -53,7 +53,7 @@ const features: Feature[] = [
 ];
 
 // Component definitions
-const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description }) => {
+const FeatureCard: React.FC<Feature> = ({ icon, title, description }) => {
     return (
         <div className="p-8 bg-white dark:bg-gray-900 rounded-2xl">
             <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-6">

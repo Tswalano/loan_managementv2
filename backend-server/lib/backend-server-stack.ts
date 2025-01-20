@@ -11,8 +11,13 @@ export class BackendServerStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-      throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY must be defined');
+    if (!process.env.SUPERBASE_URL
+      || !process.env.SUPERBASE_ANON_KEY
+      || !process.env.SUPERBASE_API_KEY
+      || !process.env.SUPERBASE_PROJECT_ID
+      || !process.env.DATABASE_URL
+    ) {
+      throw new Error('Missing required environment variables for Supabase configuration');
     }
 
     const fn = new NodejsFunction(this, 'lambda', {
@@ -22,14 +27,17 @@ export class BackendServerStack extends cdk.Stack {
     });
 
     // Add environment variables
-    fn.addEnvironment('SUPABASE_URL', process.env.SUPABASE_URL);
-    fn.addEnvironment('SUPABASE_ANON_KEY', process.env.SUPABASE_ANON_KEY);
+    fn.addEnvironment('DATABASE_URL', process.env.DATABASE_URL);
+    fn.addEnvironment('SUPERBASE_ANON_KEY', process.env.SUPERBASE_ANON_KEY);
+    fn.addEnvironment('SUPERBASE_API_KEY', process.env.SUPERBASE_API_KEY);
+    fn.addEnvironment('SUPERBASE_PROJECT_ID', process.env.SUPERBASE_PROJECT_ID);
+    fn.addEnvironment('SUPERBASE_URL', process.env.SUPERBASE_URL);
 
     // Create the API Gateway with CORS configuration
     new apigw.LambdaRestApi(this, 'loan-managment-api', {
       handler: fn,
       defaultCorsPreflightOptions: {
-        allowOrigins: ['http://localhost:5173'],
+        allowOrigins: ['http://localhost:5173', 'https://main.d100wgour4wo0j.amplifyapp.com', 'https://glenify.studio'],
         allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowHeaders: [
           'Content-Type',
@@ -40,6 +48,6 @@ export class BackendServerStack extends cdk.Stack {
         allowCredentials: true,
       },
     });
-    
+
   }
 }

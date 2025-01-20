@@ -65,7 +65,7 @@ const RequestAccessPage: React.FC = () => {
             });
 
             reset();
-        } catch (error) {
+        } catch {
             toast({
                 title: "Error Submitting Request",
                 description: "Please try again later.",

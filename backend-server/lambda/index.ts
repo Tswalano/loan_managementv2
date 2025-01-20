@@ -6,9 +6,6 @@ import { Context as HonoContext } from 'hono';
 
 const app = new Hono();
 
-// check if prod or dev
-const isProd = process.env.NODE_ENV === 'production'
-
 // Add CORS middleware
 app.use('/*', cors({
     origin: ['http://localhost:5173', 'https://8bp49x30ql.execute-api.af-south-1.amazonaws.com'],
@@ -25,22 +22,17 @@ app.use('/*', cors({
 }));
 
 // Environment validation
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPERBASE_URL = process.env.SUPERBASE_URL;
+const SUPERBASE_API_KEY = process.env.SUPERBASE_API_KEY;
+const SUPERBASE_ANON_KEY = process.env.SUPERBASE_ANON_KEY;
+const SUPERBASE_PROJECT_ID = process.env.SUPERBASE_PROJECT_ID;
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+if (!SUPERBASE_URL || !SUPERBASE_ANON_KEY) {
     throw new Error('Missing required environment variables for Supabase configuration');
 }
 
 // Supabase client setup
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// Type definitions
-interface AuthResponse {
-    message: string;
-    token?: string;
-    error?: string;
-}
+const supabase = createClient(SUPERBASE_URL, SUPERBASE_ANON_KEY);
 
 type Variables = {
     user: User;
@@ -101,9 +93,80 @@ const validateLoginRequest = (body: unknown): body is LoginRequest => {
 };
 
 // Health check endpoint
-app.get('/health', (c) => {
-    return c.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/health', async (c) => {
+    try {
+        const response = await fetch('https://api.supabase.com/v1/projects', {
+            headers: {
+                'Authorization': `Bearer ${SUPERBASE_API_KEY}`,
+                'Content-Type': 'application/json',
+            }
+        })
+
+        if (!response.ok) {
+            throw new Error('Error fetching project status');
+        }
+
+        const data = await response.json();
+        const project = data.find((p: any) => p.id === SUPERBASE_PROJECT_ID);
+
+        if (!project) {
+            throw new Error('Project not found');
+        }
+
+        if (project.status === 'INACTIVE' || project.suspended) {
+            return c.json({ status: 'inactive', message: 'Project is not active' }, 403);
+        }
+
+        if (project.statu === 'COMING_UP') {
+            return c.json({ status: 'pending', message: 'Project is coming up' }, 202);
+        }
+
+        // If active, return health status
+        return c.json({ status: 'ok', timestamp: new Date().toISOString() }, 200);
+    } catch (err) {
+        return c.json({ status: 'error', message: err instanceof Error ? err.message : 'An error occurred' }, 500);
+    }
 });
+
+
+app.post('/start-project', async (c) => {
+    try {
+        const response = await fetch(`https://api.supabase.com/v1/projects/${SUPERBASE_PROJECT_ID}/restore`, {
+            headers: {
+                'Authorization': `Bearer ${SUPERBASE_API_KEY}`,
+                'Content-Type': 'application/json',
+            }
+        })
+
+        console.log(response)
+
+        if (response.status === 400) {
+            return c.json({ status: 'error', message: 'Project already running' }, 400);
+        }
+
+        const data = await response.json();
+        const project = data.find((p: any) => p.id === SUPERBASE_PROJECT_ID);
+
+        if (!project) {
+            throw new Error('Project not found');
+        }
+
+        if (project.status === 'INACTIVE') {
+            return c.json({ status: 'inactive', message: 'Project is not active' }, 403);
+        }
+
+        if (project.status === 'COMING_UP') {
+            return c.json({ status: 'pending', message: 'Project is coming up' }, 202);
+        }
+
+        // If active, return health status
+        return c.json({ status: 'ok', timestamp: new Date().toISOString() }, 200);
+
+    } catch (error) {
+        return c.json({ success: false, error: error instanceof Error ? error.message : 'An error occurred' }, 500);
+    }
+});
+
 
 // Login endpoint
 app.post('/login', async (c) => {
