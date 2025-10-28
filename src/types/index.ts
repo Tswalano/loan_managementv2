@@ -1,133 +1,167 @@
-// import { balances, transactions } from "@/lib/db/schema";
+// -----------------------------------------------------------------------------
+// ENUMS
+// -----------------------------------------------------------------------------
 
-import { balances, loans, transactions } from "@/lib/db/schema";
-
-export type LoanStatus = 'ACTIVE' | 'PAID' | 'DEFAULTED';
-
-export type LoanTransactionType = 'INCOME' | 'EXPENSE' | 'LOAN_PAYMENT' | 'LOAN_DISBURSEMENT';
-
+export type AccountStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+export type AccountType = 'SAVINGS' | 'CHECKING' | 'LOAN' | 'INVESTMENT' | 'CASH' | 'BANK' | 'MOBILE_MONEY' | 'LOAN_RECEIVABLE';
+export type TransactionType =
+    | 'INCOME'
+    | 'EXPENSE'
+    | 'TRANSFER'
+    | 'LOAN_DISBURSEMENT'
+    | 'LOAN_PAYMENT'
+    | 'DEPOSIT'
+    | 'WITHDRAWAL'
+    | 'FEE'
+    | 'INTEREST';
+export type LoanStatus = 'PENDING' | 'ACTIVE' | 'PAID' | 'DEFAULTED' | 'CANCELLED';
 export type Status = 'PENDING' | 'COMPLETED' | 'FAILED';
-
 export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'MOBILE_MONEY';
 
-
-// Extended categories for better organization
+// Extended transaction categories for UI organization
 export const TransactionCategories = {
     INCOME: ['Interest', 'Late Fees', 'Other Income'],
     EXPENSE: ['Office Rent', 'Utilities', 'Salary', 'Marketing', 'Office Supplies', 'Other Expenses'],
     LOAN_PAYMENT: ['Principal Payment', 'Interest Payment', 'Late Fee Payment'],
-    LOAN_DISBURSEMENT: ['New Loan', 'Loan Renewal']
+    LOAN_DISBURSEMENT: ['New Loan', 'Loan Renewal'],
 } as const;
+
+// -----------------------------------------------------------------------------
+// USERS
+// -----------------------------------------------------------------------------
 
 export interface User {
     id: string;
     email: string;
-    createdAt: Date;
-    name?: string;
+    passwordHash?: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    phoneNumber?: string | null;
+    name?: string | null; // Alias for combined display
     role?: 'ADMIN' | 'USER';
     settings?: Record<string, unknown>;
+    createdAt: string | Date;
+    updatedAt: string | Date;
 }
 
-export type FormTransactionData = {
-    description: string;
-    amount: number;
-    interestRate: number;
-    fromBalanceId: string;
-    date: Date;
-}
-
-// // export type Loan = typeof loans.$inferSelect;
-// export type Transaction = typeof transactions.$inferSelect;
-// // export type NewLoan = Omit<typeof loans.$inferInsert, 'id' | 'createdAt'>;
-export type NewTransaction = Omit<typeof transactions.$inferInsert, 'id' | 'createdAt' | 'updatedAt' | 'userId'>;
-export type Loan = typeof loans.$inferSelect & {
-    transactions: typeof transactions.$inferSelect[]
-    balance: typeof balances.$inferSelect
-};
-// export type NewBalance = Omit<typeof balances.$inferInsert, 'id' | 'createdAt'>;
+// -----------------------------------------------------------------------------
+// BALANCES
+// -----------------------------------------------------------------------------
 
 export interface Balance {
     id: string;
     userId: string;
-    type: 'CASH' | 'BANK' | 'MOBILE_MONEY' | 'LOAN_RECEIVABLE';
-    accountReference: string;
-    bankName: string;
-    accountName: string;
+    type: AccountType;
+    accountReference?: string;
+    bankName?: string;
+    accountName?: string;
     currentBalance: string;
-    previousBalance: string;
-    lastTransactionId: string | null;
-    accountStatus: 'ACTIVE' | 'INACTIVE';
+    previousBalance?: string;
+    lastTransactionId?: string | null;
+    accountStatus: AccountStatus;
     createdAt: string;
     updatedAt: string;
 }
 
 export interface NewBalance {
     userId: string;
-    type: 'CASH' | 'BANK' | 'MOBILE_MONEY' | 'LOAN_RECEIVABLE';
-    accountReference: string;
-    bankName: string;
-    accountName: string;
-    currentBalance: string;
-    accountStatus: 'ACTIVE' | 'INACTIVE';
+    type: AccountType;
+    accountReference?: string;
+    bankName?: string;
+    accountName?: string;
+    currentBalance?: string;
+    accountStatus?: AccountStatus;
 }
 
-export interface Balance {
-    id: string;
-    userId: string;
-    type: 'CASH' | 'BANK' | 'MOBILE_MONEY' | 'LOAN_RECEIVABLE';
-    accountReference: string;
-    bankName: string;
-    accountName: string;
-    currentBalance: string;
-    previousBalance: string;
-    lastTransactionId: string | null;
-    accountStatus: 'ACTIVE' | 'INACTIVE';
-    createdAt: string;
-    updatedAt: string;
-}
+// -----------------------------------------------------------------------------
+// TRANSACTIONS
+// -----------------------------------------------------------------------------
 
 export interface Transaction {
     id: string;
     userId: string;
     date: string;
-    type: 'INCOME' | 'EXPENSE' | 'LOAN_PAYMENT' | 'LOAN_DISBURSEMENT';
+    type: TransactionType;
     category: string;
-    amount: number;
+    amount: number | string;
     description?: string;
     reference: string;
     fromBalanceId?: string;
     toBalanceId?: string;
     balanceAfterTransaction?: number;
-    loanStatus?: 'ACTIVE' | 'PAID' | 'DEFAULTED';
+    loanStatus?: LoanStatus;
     paymentsMade?: number;
     totalInterest?: number;
     remainingBalance?: number;
     interestRate?: number;
+    isLoanPayment?: boolean;
+    isLoanDisbursement?: boolean;
     createdAt: string;
     updatedAt: string;
 }
 
-// export interface NewTransaction {
-//     amount: number;
-//     type: 'INCOME' | 'EXPENSE' | 'LOAN_PAYMENT' | 'LOAN_DISBURSEMENT';
-//     category: string;
-//     description?: string;
-//     reference: string;
-//     fromBalanceId?: string;
-//     toBalanceId?: string;
-//     date: string;
-//     // loan data
-//     loanStatus?: 'ACTIVE' | 'PAID' | 'DEFAULTED';
-//     paymentsMade?: number;
-//     totalInterest?: number;
-//     remainingBalance?: number;
-//     // Add loan-specific fields
-//     isLoanPayment?: boolean;
-//     isLoanDisbursement?: boolean;
-//     loanTrackingId?: string; 
-//     borrowerName?: string;
-//     interestRate?: number;
-// }
+export interface NewTransaction {
+    amount: string | number;
+    type: TransactionType;
+    category: string;
+    description?: string;
+    reference: string;
+    fromBalanceId?: string;
+    toBalanceId?: string;
+    date: string | Date;
+    loanStatus?: LoanStatus;
+    paymentsMade?: number;
+    totalInterest?: number;
+    remainingBalance?: number;
+    interestRate?: number;
+    isLoanPayment?: boolean;
+    isLoanDisbursement?: boolean;
+    loanTrackingId?: string;
+    borrowerName?: string;
+}
+
+// -----------------------------------------------------------------------------
+// LOANS
+// -----------------------------------------------------------------------------
+
+export interface Loan {
+    id: string;
+    userId: string;
+    balanceId: string;
+    borrowerName: string;
+    principalAmount: string;
+    interestRate: string;
+    termMonths: string;
+    status: LoanStatus;
+    disbursementDate?: string | null;
+    maturityDate?: string | null;
+    outstandingBalance?: string | null;
+    totalPaid: string;
+    createdAt: string;
+    updatedAt: string;
+
+    // Relations
+    balance?: Balance;
+    transactions?: Transaction[];
+}
+
+export interface NewLoan {
+    userId: string;
+    balanceId: string;
+    borrowerName: string;
+    principalAmount: string;
+    interestRate: string;
+    termMonths: string;
+    status?: LoanStatus;
+    disbursementDate?: string;
+    maturityDate?: string;
+    outstandingBalance?: string;
+    totalPaid?: string;
+}
+
+// -----------------------------------------------------------------------------
+// LOAN TRACKING & PAYMENTS
+// -----------------------------------------------------------------------------
 
 export interface LoanTracking {
     id: string;
@@ -148,27 +182,10 @@ export interface LoanTracking {
     updatedAt: string;
 }
 
-// export type RequiredLoanData = {
-//     loanStatus: LoanStatus | null | undefined,
-//     paymentsMade: number,
-//     totalInterest: number,
-//     remainingBalance: number,
-//     interestRate: number,
-//     fromBalanceId: string | null,
-//     toBalanceId: string | null,
-//     description: string,
-//     date: Date,
-//     // userId: string,
-//     type: LoanTransactionType,
-//     category: string,
-//     amount: string,
-//     reference: string
-// }
-
 export interface LoanPayment {
     amount: number | null;
     loanId: string;
-    accountId: string | undefined;
+    accountId?: string;
     description: string;
 }
 
@@ -176,4 +193,23 @@ export interface LoanTransactionResult {
     success: boolean;
     transaction?: Transaction;
     error?: string;
+}
+
+// -----------------------------------------------------------------------------
+// FORMS / UI
+// -----------------------------------------------------------------------------
+
+export type FormTransactionData = {
+    description: string;
+    amount: number;
+    interestRate: number;
+    fromBalanceId: string;
+    date: Date;
+};
+
+export interface ApiResponse<T> {
+    success: boolean;
+    message?: string;
+    error?: string;
+    data?: T;
 }

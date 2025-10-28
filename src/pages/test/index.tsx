@@ -7,7 +7,6 @@ import {
 } from '@/components/ui/card';
 import { ArrowDown, ArrowRight, ArrowUp, Loader2 } from 'lucide-react';
 import { useBalanceOperations } from '@/hooks/useBalanceOperations';
-import { supabase } from '@/lib/supabase';
 import { NewBalance, NewTransaction } from '@/types';
 import { CardDeck } from './MobileCardDeck';
 import { Input } from '@/components/ui/input';
@@ -86,7 +85,7 @@ const BalanceOperationsUI = () => {
         }
 
         console.log(newExpense);
-        
+
 
         try {
             await recordExpense(newExpense);

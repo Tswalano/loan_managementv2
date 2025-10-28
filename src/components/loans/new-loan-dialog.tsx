@@ -17,7 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { Balance, FormTransactionData, NewTransaction } from "@/types";
-import { generateTransactionData } from "@/lib/db/helper";
+import { generateTransactionData } from "@/lib/utils/helper";
 
 const loanSchema = z.object({
     description: z.string().min(2, "Borrower name is required"),

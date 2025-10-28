@@ -1,16 +1,19 @@
 // src/hooks/useUserSession.ts
 import { BACKEND_API_URL } from '@/lib/utils/consts';
+import { User } from '@/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useCallback } from 'react';
-import type { User } from '@supabase/supabase-js';
 
 interface SessionResponse {
     user: User;
-    token?: string;
-    sessions?: unknown;
+    success: boolean;
+    message: string;
+
+
 }
 
 interface AuthError {
+    success: boolean;
     message: string;
     code?: string;
 }
@@ -30,7 +33,7 @@ const fetchSession = async (): Promise<SessionResponse> => {
     const token = getStoredToken();
     if (!token) throw new Error('No authentication token found');
 
-    const response = await fetch(`${BACKEND_API_URL}/active-sessions`, {
+    const response = await fetch(`${BACKEND_API_URL}/me`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -55,9 +58,9 @@ const fetchSession = async (): Promise<SessionResponse> => {
     }
 
     const data = await response.json();
+    console.log('Fetched session data:', data);
     return {
-        user: data.sessions.user,
-        sessions: data.sessions
+        user: data.user
     };
 };
 

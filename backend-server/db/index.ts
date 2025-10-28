@@ -1,21 +1,20 @@
-import { createClient } from '@supabase/supabase-js';
+import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import * as dotenv from 'dotenv';
+import * as schema from './schema';
 
-dotenv.config();
-
-const DATABASE_URL = process.env.DATABASE_URL;
-const SUPERBASE_URL = process.env.SUPERBASE_URL;
-const SUPERBASE_ANON_KEY = process.env.SUPERBASE_ANON_KEY;
-
-if (!DATABASE_URL || !SUPERBASE_URL || !SUPERBASE_ANON_KEY) {
-    throw new Error('Missing required environment variables for Supabase configuration');
+if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL environment variable is not set');
 }
 
-const client = postgres(DATABASE_URL, { prepare: false })
-const db = drizzle({ client })
+// Create postgres client
+const client = postgres(process.env.DATABASE_URL, {
+    max: 10,
+    idle_timeout: 20,
+    connect_timeout: 10,
+});
 
-export const supabase = createClient(SUPERBASE_URL, SUPERBASE_ANON_KEY)
+// Create drizzle instance
+export const db = drizzle(client, { schema });
 
-export default db;
+export type Database = typeof db;

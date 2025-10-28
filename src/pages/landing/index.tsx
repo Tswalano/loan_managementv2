@@ -1,8 +1,9 @@
 import React from 'react';
-import { Download, Mail, Wallet, ArrowUpDown, LineChart, Shield, Star } from 'lucide-react';
+import { Download, Mail, Wallet, ArrowUpDown, LineChart, Shield, PiggyBank } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import Footer from '@/components/footer';
 import { useTheme } from '@/components/theme-provider';
+import { Link, useNavigate } from 'react-router-dom';
 
 // Interface definitions
 interface Feature {
@@ -10,8 +11,6 @@ interface Feature {
     title: string;
     description: string;
 }
-
-// Removed FeatureCardProps interface as it is equivalent to Feature
 
 interface MetricCardProps {
     number: string;
@@ -83,28 +82,16 @@ const MetricCard: React.FC<MetricCardProps> = ({ number, label }) => {
 };
 
 const LandingPage: React.FC = () => {
-
     const { theme } = useTheme();
-
-    const renderStars = (count: number): React.ReactNode[] => {
-        return Array.from({ length: count }, (_, index) => (
-            <Star key={index} className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-        ));
-    };
+    const navigate = useNavigate();
 
     const handleStartTrial = (): void => {
-        // Add trial start logic here
-        console.log('Starting free trial');
+        // Navigate to signup or trial page
+        window.location.href = '/app';
     };
 
     const handleContactSales = (): void => {
-        // Add contact sales logic here
-        console.log('Contacting sales');
-    };
-
-    const handleWatchVideo = (): void => {
-        // Add video playback logic here
-        console.log('Playing video');
+        navigate('/contact-sales');
     };
 
     return (
@@ -113,11 +100,18 @@ const LandingPage: React.FC = () => {
             <nav className="border-b border-gray-200 dark:border-gray-800 py-4">
                 <div className="container mx-auto px-4">
                     <div className="flex justify-between items-center">
-                        <div className="text-2xl font-bold text-emerald-600">FinanceFlow</div>
+                        <div className="text-2xl font-bold text-emerald-600">
+                            <div className="flex-shrink-0">
+                                <Link to="/" className="flex items-center text-2xl font-bold text-emerald-600 dark:text-emerald-500">
+                                    <PiggyBank className="h-6 w-6 mr-2" />
+                                    FinanceFlow
+                                </Link>
+                            </div>
+                        </div>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                             <a
                                 href="/app"
-                                className="px-4 py-2 bg-emerald-600 text-white rounded-lg"
+                                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
                             >
                                 Get started
                             </a>
@@ -136,9 +130,9 @@ const LandingPage: React.FC = () => {
                     {/* Small badge */}
                     <div className="flex justify-center mb-8">
                         <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-sm">
-                            <span className="text-emerald-600 dark:text-emerald-400">New features available</span>
+                            <span className="text-emerald-600 dark:text-emerald-400">Excuse the mess, We are still in</span>
                             <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400 rounded-full text-xs font-medium">
-                                New
+                                Development
                             </span>
                         </div>
                     </div>
@@ -150,35 +144,6 @@ const LandingPage: React.FC = () => {
                         <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
                             Manage loans, track expenses, and gain insights with our comprehensive financial management platform. Perfect for businesses of all sizes.
                         </p>
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-                            <button
-                                onClick={handleStartTrial}
-                                className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors text-lg"
-                            >
-                                Start free trial
-                            </button>
-                            <button
-                                onClick={handleWatchVideo}
-                                className="px-8 py-4 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors text-lg inline-flex items-center"
-                            >
-                                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Watch video
-                            </button>
-                        </div>
-
-                        {/* Trust badges */}
-                        <div className="flex flex-col items-center">
-                            <div className="flex items-center gap-2 mb-4">
-                                {renderStars(5)}
-                                <span className="text-gray-600 dark:text-gray-400">5.0</span>
-                            </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                Trusted by over 1000+ companies worldwide
-                            </p>
-                        </div>
                     </div>
                 </div>
 

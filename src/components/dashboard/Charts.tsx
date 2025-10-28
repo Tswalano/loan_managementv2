@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
     LineChart,
     Line,
-    BarChart,
-    Bar,
+    // BarChart,
+    // Bar,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -13,12 +14,12 @@ import {
     Legend,
     AreaChart,
     Area,
-    Cell
+    // Cell
 } from 'recharts';
 import { formatCurrency } from '@/lib/utils/formatters';
-import { TransactionMetrics } from '@/hooks/useTransactions';
+import { useTransactionMetrics } from '@/hooks/useTransactions';
 import { MetricCard } from './MetricCard';
-import { PiggyBank, TrendingUp, Users, Wallet } from 'lucide-react';
+import { PiggyBank, TrendingUp, Users, Wallet, Loader2 } from 'lucide-react';
 
 const COLORS = {
     INCOME: '#10B981',      // Emerald
@@ -29,26 +30,60 @@ const COLORS = {
     ACTIVE_LOANS: '#2563EB' // Blue
 };
 
-interface DashboardChartsProps {
-    metrics: TransactionMetrics;
-}
+export const DashboardCharts: React.FC = () => {
+    const { metrics, isLoading, error, refetchMetrics } = useTransactionMetrics();
 
-export const DashboardCharts: React.FC<DashboardChartsProps> = ({ metrics }) => {
+    // Loading state
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-[400px]">
+                <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[400px] space-y-4">
+                <p className="text-red-600 dark:text-red-400">Error loading metrics: {error.message}</p>
+                <button
+                    onClick={() => refetchMetrics()}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                >
+                    Retry
+                </button>
+            </div>
+        );
+    }
+
+    // No data state
+    if (!metrics) {
+        return (
+            <div className="flex items-center justify-center h-[400px]">
+                <p className="text-gray-500 dark:text-gray-400">No metrics data available</p>
+            </div>
+        );
+    }
+
+    console.log('Transaction Metrics:', metrics);
+
     // Calculate loan collection percentage
-    const totalDisbursed = metrics.loanMetrics.totalLoanAmount;
-    const totalCollected = metrics.monthlyData.reduce((acc, month) => acc + month.loanPayment, 0);
+    const totalDisbursed = metrics.loanMetrics?.totalLoanAmount || 0;
+    const totalCollected = metrics.monthlyData?.reduce((acc, month) => acc + (month.loanPayment || 0), 0) || 0;
     const collectionPercentage = totalDisbursed > 0
         ? (totalCollected / totalDisbursed) * 100
         : 0;
 
     // Calculate loan growth rate
-    const currentMonth = metrics.loanTrends[metrics.loanTrends.length - 1];
-    const previousMonth = metrics.loanTrends[metrics.loanTrends.length - 2];
-    const growthRate = previousMonth?.activeLoans > 0
-        ? ((currentMonth?.activeLoans - previousMonth?.activeLoans) / previousMonth?.activeLoans) * 100
+    const loanTrendsLength = metrics.loanTrends?.length || 0;
+    const currentMonth = loanTrendsLength > 0 ? metrics.loanTrends[loanTrendsLength - 1] : null;
+    const previousMonth = loanTrendsLength > 1 ? metrics.loanTrends[loanTrendsLength - 2] : null;
+    const growthRate = previousMonth?.activeLoans && previousMonth.activeLoans > 0
+        ? ((currentMonth?.activeLoans || 0) - previousMonth.activeLoans) / previousMonth.activeLoans * 100
         : 0;
 
-    const CustomTooltip = ({ active, payload, label }: any) => {
+    const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any; label?: string }) => {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
@@ -80,7 +115,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ metrics }) => 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 <MetricCard
                     title="Total Loan Amount"
-                    value={formatCurrency(metrics.loanMetrics.totalLoanAmount)}
+                    value={formatCurrency(metrics.loanMetrics?.totalLoanAmount || 0)}
                     icon={<Wallet className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
                     trend={{
                         value: parseFloat(collectionPercentage.toFixed(2)),
@@ -89,13 +124,13 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ metrics }) => 
                 />
                 <MetricCard
                     title="Total Interest"
-                    value={formatCurrency(metrics.loanMetrics.totalInterest)}
+                    value={formatCurrency(metrics.loanMetrics?.totalInterest || 0)}
                     icon={<TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
                     description="Based on active loans"
                 />
                 <MetricCard
                     title="Total Bank Balance"
-                    value={metrics.bankBalance}
+                    value={formatCurrency(metrics.bankBalance || 0)}
                     icon={<Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
                     trend={{
                         value: parseFloat(growthRate.toFixed(2)),
@@ -104,7 +139,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ metrics }) => 
                 />
                 <MetricCard
                     title="Remaining Balance"
-                    value={formatCurrency(metrics.loanMetrics.totalRemainingBalance)}
+                    value={formatCurrency(metrics.loanMetrics?.totalRemainingBalance || 0)}
                     icon={<PiggyBank className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
                     description="Total outstanding amount"
                 />
@@ -121,7 +156,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ metrics }) => 
                     <CardContent>
                         <div className="h-[350px]">
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={metrics.monthlyData}>
+                                <LineChart data={metrics.monthlyData || []}>
                                     <CartesianGrid
                                         strokeDasharray="3 3"
                                         className="stroke-gray-200 dark:stroke-gray-700"
@@ -169,7 +204,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ metrics }) => 
                     <CardContent>
                         <div className="h-[350px]">
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={metrics.loanTrends}>
+                                <AreaChart data={metrics.loanTrends || []}>
                                     <CartesianGrid
                                         strokeDasharray="3 3"
                                         className="stroke-gray-200 dark:stroke-gray-700"
@@ -220,7 +255,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ metrics }) => 
                 </Card>
 
                 {/* Transaction Type Distribution */}
-                <Card className="bg-white dark:bg-gray-800">
+                {/* <Card className="bg-white dark:bg-gray-800">
                     <CardHeader>
                         <CardTitle>Transaction Distribution</CardTitle>
                         <CardDescription>Breakdown by transaction type</CardDescription>
@@ -229,7 +264,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ metrics }) => 
                         <div className="h-[350px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart
-                                    data={metrics.typeBreakdown}
+                                    data={metrics.typeBreakdown || []}
                                     layout="vertical"
                                     barSize={20}
                                 >
@@ -256,7 +291,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ metrics }) => 
                                         name="Amount"
                                         radius={[0, 4, 4, 0]}
                                     >
-                                        {metrics.typeBreakdown.map((entry, index) => (
+                                        {(metrics.typeBreakdown || []).map((entry, index) => (
                                             <Cell
                                                 key={`cell-${index}`}
                                                 fill={COLORS[entry.type as keyof typeof COLORS]}
@@ -267,10 +302,10 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ metrics }) => 
                             </ResponsiveContainer>
                         </div>
                     </CardContent>
-                </Card>
+                </Card> */}
 
                 {/* Active Loans Trend */}
-                <Card className="bg-white dark:bg-gray-800">
+                {/* <Card className="bg-white dark:bg-gray-800">
                     <CardHeader>
                         <CardTitle>Active Loans Trend</CardTitle>
                         <CardDescription>Monthly active loans count</CardDescription>
@@ -278,7 +313,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ metrics }) => 
                     <CardContent>
                         <div className="h-[350px]">
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={metrics.loanTrends}>
+                                <AreaChart data={metrics.loanTrends || []}>
                                     <CartesianGrid
                                         strokeDasharray="3 3"
                                         className="stroke-gray-200 dark:stroke-gray-700"
@@ -305,7 +340,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ metrics }) => 
                             </ResponsiveContainer>
                         </div>
                     </CardContent>
-                </Card>
+                </Card> */}
             </div>
         </div>
     );

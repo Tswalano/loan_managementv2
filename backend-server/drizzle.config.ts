@@ -1,22 +1,12 @@
-import type { Config } from 'drizzle-kit';
-import * as dotenv from 'dotenv';
+import { defineConfig } from 'drizzle-kit';
 
-dotenv.config();
-
-if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL is not defined');
-}
-
-export default {
-    out: './drizzle',
-    dialect: "postgresql",
+export default defineConfig({
     schema: './db/schema.ts',
+    out: './db/migrations',
+    dialect: 'postgresql',
     dbCredentials: {
-        url: `${process.env.DATABASE_URL}`
+        url: process.env.DATABASE_URL!,
     },
     verbose: true,
     strict: true,
-    // migrations: {
-    //     schema: 'public',
-    // }
-} satisfies Config;
+});

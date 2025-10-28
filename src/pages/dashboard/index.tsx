@@ -12,28 +12,30 @@ import { useTransactionMetrics } from '@/hooks/useTransactions';
 
 export default function DashboardPage() {
     const {
-        loading,
-        error,
+        isLoading: balanceLoading,
+        error: balanceError,
         loans,
         balances,
-        fetchTransactions,
-        setLoading, recordTransaction
+        refetchLoans,
+        recordTransaction
     } = useBalanceOperations();
-    const { metrics} = useTransactionMetrics();
+
+    const { isLoading: metricsLoading } = useTransactionMetrics();
 
     const [isAlertOpen, setIsAlertOpen] = useState(false);
 
+    const loading = balanceLoading || metricsLoading;
+    const error = balanceError ? (balanceError as Error).message : null;
+
     const handleLoanPayment = async (payment: LoanPayment): Promise<LoanTransactionResult> => {
         try {
-            // Example implementation:
-            const result = await recordTransaction({
+            const result = await recordTransaction.mutateAsync({
                 amount: String(payment.amount),
                 type: 'LOAN_PAYMENT',
                 category: 'Loan Payment',
                 description: payment.description,
                 reference: `LOAN-PAY-${Date.now()}`,
                 date: new Date(),
-                isLoanPayment: true,
                 toBalanceId: payment.accountId
             });
 
@@ -57,10 +59,6 @@ export default function DashboardPage() {
         );
     }
 
-    // const loanTransactions = transactions.filter(
-    //     tx => tx.type === 'LOAN_DISBURSEMENT' || tx.type === 'LOAN_PAYMENT'
-    // );
-
     return (
         <div className="p-8 space-y-8 bg-gray-50 dark:bg-gray-900">
             {/* Header */}
@@ -76,6 +74,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-4">
                     <Button
                         size="sm"
+                        variant="outline"
                         className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700"
                     >
                         <Calendar className="h-4 w-4 mr-2" />
@@ -92,15 +91,14 @@ export default function DashboardPage() {
             </div>
 
             {/* Charts */}
-            <DashboardCharts metrics={metrics} />
+            <DashboardCharts />
 
             {/* Loan Table */}
-            {loans.length > 0 ? (
+            {loans && loans.length > 0 ? (
                 <LoanTableRecords
                     loans={loans}
                     loading={loading}
-                    setLoading={setLoading}
-                    refreshLoans={fetchTransactions}
+                    refreshLoans={refetchLoans}
                     handleLoanPayment={handleLoanPayment}
                     balances={balances}
                 />

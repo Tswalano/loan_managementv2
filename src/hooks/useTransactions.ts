@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useQuery } from '@tanstack/react-query';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { BACKEND_API_URL } from '@/lib/utils/consts';
+import useUserSession from './useUserSession';
 
+// -----------------------------
+// Type definitions
+// -----------------------------
 interface TransactionData {
     month: string;
     income: number;
@@ -38,89 +42,9 @@ export interface TransactionMetrics {
     }[];
 }
 
-export function useTransactionMetrics() {
-    const [metrics, setMetrics] = useState<TransactionMetrics>({
-        monthlyData: [],
-        typeBreakdown: [],
-        bankBalance: 0,
-        loanMetrics: {
-            totalActiveLoans: 0,
-            totalLoanAmount: 0,
-            totalInterest: 0,
-            totalRemainingBalance: 0
-        },
-        loanTrends: []
-    });
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
-
-    useEffect(() => {
-        async function fetchMetrics() {
-            try {
-                setLoading(true);
-                
-                // Get the date range for the last 6 months
-                const endDate = endOfMonth(new Date());
-                const startDate = startOfMonth(new Date(new Date().setMonth(endDate.getMonth() - 5)));
-
-                // Fetch monthly transaction data
-                const { data: monthlyTransactions, error: transactionError } = await supabase
-                    .from('transactions')
-                    .select('date, type, amount, isLoanPayment, isLoanDisbursement')
-                    .gte('date', startDate.toISOString())
-                    .lte('date', endDate.toISOString())
-                    .order('date', { ascending: true });
-
-                if (transactionError) throw transactionError;
-
-                // Fetch active loans data
-                const { data: activeLoans, error: loansError } = await supabase
-                    .from('loans')
-                    .select('*')
-                    .eq('status', 'ACTIVE');
-
-                if (loansError) throw loansError;
-
-                const {data: balances} = await supabase.from('balances').select('*')
-
-                // Fetch loan trends
-                const { data: monthlyLoans, error: trendError } = await supabase
-                    .from('loans')
-                    .select('*')
-                    .gte('createdAt', startDate.toISOString())
-                    .order('createdAt', { ascending: true });
-
-                if (trendError) throw trendError;
-
-                // Process metrics
-                const monthlyMetrics = processMonthlyData(monthlyTransactions);
-                const typeBreakdown = processTypeBreakdown(monthlyTransactions);
-                const loanMetrics = processLoanMetrics(activeLoans);
-                const loanTrends = processLoanTrends(monthlyLoans, monthlyTransactions);
-                const totalBalance = balances?.reduce((sum, balance) => sum + Number(balance.currentBalance || 0), 0)
-                
-
-                setMetrics({
-                    bankBalance: totalBalance,
-                    monthlyData: monthlyMetrics,
-                    typeBreakdown,
-                    loanMetrics,
-                    loanTrends
-                });
-                
-            } catch (error) {
-                setError(error as Error);
-                console.error('Error fetching metrics:', error);
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        fetchMetrics();
-    }, []);
-
-    return { metrics, loading, error };
-}
+// -----------------------------
+// Processing utilities
+// -----------------------------
 
 function processMonthlyData(data: any[]): TransactionData[] {
     const monthlyMap = new Map<string, TransactionData>();
@@ -136,69 +60,79 @@ function processMonthlyData(data: any[]): TransactionData[] {
             expense: 0,
             loanPayment: 0,
             loanDisbursement: 0,
-            total: 0
+            total: 0,
         });
     }
 
-    // Process the data
-    data.forEach(transaction => {
-        const monthKey = format(new Date(transaction.date), 'MMM yyyy');
-        if (monthlyMap.has(monthKey)) {
-            const monthData = monthlyMap.get(monthKey)!;
-            const amount = Number(transaction.amount);
+    // Process transactions by month
+    data.forEach((tx) => {
+        const monthKey = format(new Date(tx.date), 'MMM yyyy');
+        const monthData = monthlyMap.get(monthKey);
+        if (!monthData) return;
 
-            switch (transaction.type) {
-                case 'INCOME':
-                    monthData.income += amount;
-                    break;
-                case 'EXPENSE':
-                    monthData.expense += amount;
-                    break;
-                case 'LOAN_PAYMENT':
-                    monthData.loanPayment += amount;
-                    break;
-                case 'LOAN_DISBURSEMENT':
-                    monthData.loanDisbursement += amount;
-                    break;
-            }
-            monthData.total += amount;
+        const amount = Number(tx.amount);
+        switch (tx.type) {
+            case 'INCOME':
+                monthData.income += amount;
+                break;
+            case 'EXPENSE':
+                monthData.expense += amount;
+                break;
+            case 'LOAN_PAYMENT':
+                monthData.loanPayment += amount;
+                break;
+            case 'LOAN_DISBURSEMENT':
+                monthData.loanDisbursement += amount;
+                break;
         }
+        monthData.total += amount;
     });
 
-    return Array.from(monthlyMap.values())
-        .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
+    return Array.from(monthlyMap.values()).sort(
+        (a, b) => new Date(a.month).getTime() - new Date(b.month).getTime()
+    );
 }
 
 function processTypeBreakdown(data: any[]): TypeBreakdown[] {
     const typeMap = new Map<string, TypeBreakdown>();
 
-    ['INCOME', 'EXPENSE', 'LOAN_PAYMENT', 'LOAN_DISBURSEMENT'].forEach(type => {
-        typeMap.set(type, { type, amount: 0, count: 0 });
+    ['INCOME', 'EXPENSE', 'LOAN_PAYMENT', 'LOAN_DISBURSEMENT'].forEach((type) =>
+        typeMap.set(type, { type, amount: 0, count: 0 })
+    );
+
+    data.forEach((tx) => {
+        const typeData = typeMap.get(tx.type);
+        if (typeData) {
+            typeData.amount += Number(tx.amount);
+            typeData.count += 1;
+        }
     });
 
-    data.forEach(transaction => {
-        const typeData = typeMap.get(transaction.type)!;
-        typeData.amount += Number(transaction.amount);
-        typeData.count += 1;
-    });
-
-    return Array.from(typeMap.values())
-        .sort((a, b) => b.amount - a.amount);
+    return Array.from(typeMap.values()).sort((a, b) => b.amount - a.amount);
 }
 
 function processLoanMetrics(loans: any[]): LoanMetrics {
     return {
-        totalActiveLoans: loans.length,
-        totalLoanAmount: loans.reduce((sum, loan) => sum + Number(loan.amount), 0),
-        totalInterest: loans.reduce((sum, loan) => sum + Number(loan.totalInterest), 0),
-        totalRemainingBalance: loans.reduce((sum, loan) => sum + Number(loan.remainingBalance), 0)
+        totalActiveLoans: loans.filter((l) => l.status === 'ACTIVE').length,
+        totalLoanAmount: loans.reduce(
+            (sum, loan) => sum + Number(loan.principalAmount || loan.amount || 0),
+            0
+        ),
+        totalInterest: loans.reduce(
+            (sum, loan) => sum + Number(loan.totalInterest || 0),
+            0
+        ),
+        totalRemainingBalance: loans.reduce(
+            (sum, loan) => sum + Number(loan.outstandingBalance || loan.remainingBalance || 0),
+            0
+        ),
     };
 }
 
 function processLoanTrends(loans: any[], transactions: any[]) {
-    const monthlyMap = new Map();
+    const monthlyMap = new Map<string, any>();
 
-    // Initialize months
+    // Initialize last 6 months
     for (let i = 0; i < 6; i++) {
         const date = new Date();
         date.setMonth(date.getMonth() - i);
@@ -208,32 +142,110 @@ function processLoanTrends(loans: any[], transactions: any[]) {
             disbursements: 0,
             payments: 0,
             interest: 0,
-            activeLoans: 0
+            activeLoans: 0,
         });
     }
 
-    // Process loans
-    loans.forEach(loan => {
+    loans.forEach((loan) => {
         const monthKey = format(new Date(loan.createdAt), 'MMM yyyy');
-        if (monthlyMap.has(monthKey)) {
-            const monthData = monthlyMap.get(monthKey);
-            monthData.disbursements += Number(loan.amount);
-            monthData.interest += Number(loan.totalInterest);
+        const monthData = monthlyMap.get(monthKey);
+        if (monthData) {
+            monthData.disbursements += Number(loan.principalAmount || loan.amount || 0);
+            monthData.interest += Number(loan.totalInterest || 0);
             monthData.activeLoans += loan.status === 'ACTIVE' ? 1 : 0;
         }
     });
 
-    // Process payments
-    transactions.forEach(transaction => {
-        if (transaction.type === 'LOAN_PAYMENT') {
-            const monthKey = format(new Date(transaction.date), 'MMM yyyy');
-            if (monthlyMap.has(monthKey)) {
-                const monthData = monthlyMap.get(monthKey);
-                monthData.payments += Number(transaction.amount);
-            }
+    transactions.forEach((tx) => {
+        if (tx.type === 'LOAN_PAYMENT') {
+            const monthKey = format(new Date(tx.date), 'MMM yyyy');
+            const monthData = monthlyMap.get(monthKey);
+            if (monthData) monthData.payments += Number(tx.amount);
         }
     });
 
-    return Array.from(monthlyMap.values())
-        .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
+    return Array.from(monthlyMap.values()).sort(
+        (a, b) => new Date(a.month).getTime() - new Date(b.month).getTime()
+    );
+}
+
+// -----------------------------
+// Data Fetcher (aligned with your API)
+// -----------------------------
+const fetchTransactionMetrics = async (userId: string): Promise<TransactionMetrics> => {
+    const token = sessionStorage.getItem('authToken');
+    if (!token) throw new Error('Not authenticated');
+
+    const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+    };
+
+    // Fetch all in parallel using existing endpoints
+    const [txRes, loansRes, balancesRes] = await Promise.all([
+        fetch(`${BACKEND_API_URL}/transactions/${userId}`, { headers }),
+        fetch(`${BACKEND_API_URL}/loans/${userId}`, { headers }),
+        fetch(`${BACKEND_API_URL}/balances/${userId}`, { headers }),
+    ]);
+
+    if (!txRes.ok || !loansRes.ok || !balancesRes.ok) {
+        throw new Error('Failed to fetch one or more metrics endpoints');
+    }
+
+    const [transactions, loans, balances] = await Promise.all([
+        txRes.json(),
+        loansRes.json(),
+        balancesRes.json(),
+    ]);
+
+    console.log('Fetched transactions:', transactions);
+    console.log('Fetched loans:', loans);
+    console.log('Fetched balances:', balances);
+
+    // Process metrics
+    const monthlyData = processMonthlyData(transactions);
+    const typeBreakdown = processTypeBreakdown(transactions);
+    const loanMetrics = processLoanMetrics(loans);
+    const loanTrends = processLoanTrends(loans, transactions);
+    const bankBalance = balances.reduce(
+        (sum: number, b: any) => sum + Number(b.balance || b.currentBalance || 0),
+        0
+    );
+
+    return {
+        monthlyData,
+        typeBreakdown,
+        loanMetrics,
+        loanTrends,
+        bankBalance,
+    };
+};
+
+// -----------------------------
+// React Query Hook
+// -----------------------------
+export function useTransactionMetrics() {
+    const { user } = useUserSession();
+
+    const {
+        data: metrics,
+        isLoading,
+        error,
+        refetch,
+    } = useQuery({
+        queryKey: ['transactionMetrics', user?.id],
+        queryFn: () => fetchTransactionMetrics(user!.id),
+        enabled: !!user,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: 10 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        retry: 2,
+    });
+
+    return {
+        metrics,
+        isLoading,
+        error: error as Error | null,
+        refetchMetrics: refetch,
+    };
 }

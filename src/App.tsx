@@ -20,8 +20,8 @@ import AccountManagementPage from './pages/accounts';
 import LandingPage from './pages/landing';
 import RequestAccessPage from './pages/RequestAccess';
 import useUserSession from './hooks/useUserSession';
-// import SettingsPage from './pages/settings';
 import SettingsAndProfilePage from './pages/settings';
+import ContactSalesPage from './pages/contact-sales';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -41,7 +41,6 @@ function AppRoutes() {
   } = useUserSession();
 
   // Show loading state
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -63,6 +62,7 @@ function AppRoutes() {
       <Routes>
         {/* Public routes accessible without authentication */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/contact-sales" element={<ContactSalesPage />} />
         <Route
           path="/app/login"
           element={

@@ -27,22 +27,22 @@ export const generateTransactionData = (data: FormTransactionData, type: LoanTra
     // const interestRate = data.interestRate ?? 0; // Default to 0 if interestRate is undefined
     // const totalInterest = (data.amount * interestRate) / 100; // Correct calculation
     // const remainingBalance = data.amount + totalInterest; // Add the calculated interest to amount
-  
+
     return {
-    //   loanStatus: type === "LOAN_DISBURSEMENT" ? "ACTIVE" : null as LoanStatus | null,
-    //   paymentsMade: type === "LOAN_PAYMENT" ? String(data.amount) : "0",
-    //   totalInterest: totalInterest.toFixed(2), // Ensure totalInterest is a string with 2 decimal places
-    //   remainingBalance: remainingBalance.toFixed(2), // Ensure remainingBalance is a string with 2 decimal places
-    //   interestRate: 30, // Convert interestRate to string
-      fromBalanceId: type === "INCOME" || type === "LOAN_PAYMENT" ? null : data.fromBalanceId,
-      toBalanceId: type === "INCOME" || type === "LOAN_PAYMENT" ? data.fromBalanceId : null,
-      date: data.date || new Date(),
-      type: type,
-      category: `${data.description} - ${formalize(type)}`,
-      amount: data.amount.toString(),
-      reference: generateReferenceNumber(type),
-      description: `${data.description} - ${formalize(type)}`,
-      isLoanDisbursement: type === "LOAN_DISBURSEMENT" ? true : false,
-      isLoanPayment: type === "LOAN_PAYMENT" ? true : false
+        //   loanStatus: type === "LOAN_DISBURSEMENT" ? "ACTIVE" : null as LoanStatus | null,
+        //   paymentsMade: type === "LOAN_PAYMENT" ? String(data.amount) : "0",
+        //   totalInterest: totalInterest.toFixed(2), // Ensure totalInterest is a string with 2 decimal places
+        //   remainingBalance: remainingBalance.toFixed(2), // Ensure remainingBalance is a string with 2 decimal places
+        //   interestRate: 30, // Convert interestRate to string
+        fromBalanceId: type === "INCOME" || type === "LOAN_PAYMENT" ? null : data.fromBalanceId,
+        toBalanceId: type === "INCOME" || type === "LOAN_PAYMENT" ? data.fromBalanceId : null,
+        date: data.date || new Date(),
+        type: type,
+        category: `${data.description} - ${formalize(type)}`,
+        amount: data.amount.toString(),
+        reference: generateReferenceNumber(type),
+        description: `${data.description} - ${formalize(type)}`,
+        isLoanDisbursement: type === "LOAN_DISBURSEMENT" ? true : false,
+        isLoanPayment: type === "LOAN_PAYMENT" ? true : false
     };
-  };
+};

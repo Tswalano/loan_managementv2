@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
     Card,
     CardContent,
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Loader2, DollarSign, PiggyBank, Play } from 'lucide-react';
+import { Loader2, PiggyBank, Play, User as UserIcon } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import useUserSession, { User } from '@/hooks/useUserSession';
 import { BACKEND_API_URL } from '@/lib/utils/consts';
@@ -29,6 +29,9 @@ interface LoginResponse {
     token: string;
     user: User;
 }
+
+const DEMO_EMAIL = "john.doe@financeflow.app";
+const DEMO_PASSWORD = "password123";
 
 // API login function
 const loginUser = async (credentials: LoginCredentials): Promise<LoginResponse> => {
@@ -56,6 +59,8 @@ export default function LoginPage() {
     const { toast } = useToast();
     const location = useLocation();
     const { setSession, isLoading } = useUserSession();
+    const year = new Date().getFullYear();
+
     interface LocationState {
         from?: {
             pathname: string;
@@ -99,7 +104,17 @@ export default function LoginPage() {
         loginMutation.mutate({ email, password });
     };
 
-
+    const handleDemoLogin = async () => {
+        setEmail(DEMO_EMAIL);
+        setPassword(DEMO_PASSWORD);
+        toast({
+            title: "Using Demo Account",
+            description: "Logging in as demo user...",
+        });
+        setTimeout(() => {
+            loginMutation.mutate({ email: DEMO_EMAIL, password: DEMO_PASSWORD });
+        }, 800);
+    };
 
     useEffect(() => {
         setLoading(true);
@@ -173,12 +188,12 @@ export default function LoginPage() {
             <header className="fixed top-0 w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-50 py-4 border-b border-gray-200 dark:border-gray-800">
                 <div className="container mx-auto px-4">
                     <div className="flex justify-between items-center">
-                        <a href="/" className="flex items-center">
+                        <Link to="/" className="flex items-center">
                             <span className="flex items-center text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-500">
                                 <PiggyBank className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
                                 FinanceFlow
                             </span>
-                        </a>
+                        </Link>
                         <ThemeToggle />
                     </div>
                 </div>
@@ -223,11 +238,15 @@ export default function LoginPage() {
                             <div className="flex flex-col items-center space-y-4">
                                 <div className="rounded-full bg-emerald-100 dark:bg-emerald-900/20 p-3">
                                     <div className="rounded-full bg-emerald-600 dark:bg-emerald-500 p-3">
-                                        <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                                        <PiggyBank className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                                     </div>
                                 </div>
                                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                                    Welcome back
+                                    <Link to="/" className="flex items-center">
+                                        <span className="flex items-center text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-500">
+                                            FinanceFlow
+                                        </span>
+                                    </Link>
                                 </h1>
                             </div>
 
@@ -273,6 +292,7 @@ export default function LoginPage() {
                                             <Input
                                                 id="password"
                                                 type="password"
+                                                placeholder='password'
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
                                                 className="h-11 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
@@ -295,12 +315,23 @@ export default function LoginPage() {
                                         <p className="text-center text-sm text-gray-600 dark:text-gray-400">
                                             Don't have an account?{' '}
                                             <a
-                                                href="/request-access"
+                                                href="/contact-sales"
                                                 className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium"
                                             >
                                                 Request Access
                                             </a>
                                         </p>
+
+                                        <Button
+                                            type="button"
+                                            onClick={handleDemoLogin}
+                                            variant="outline"
+                                            className="w-full h-11 flex items-center justify-center gap-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                                        >
+                                            <UserIcon className="h-4 w-4" /> Use Demo Account
+                                        </Button>
+
+
                                     </CardFooter>
                                 </form>
                             </Card>
@@ -351,7 +382,8 @@ export default function LoginPage() {
                             <a href="https://glenify.studio" className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors">
                                 <span className="font-semibold">Glenify Studios</span>
                             </a>{' '}
-                            © 2024 FinanceFlow. All rights reserved.
+                            © {year
+                            } FinanceFlow. All rights reserved.
                         </div>
                         <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
                             <button className="text-gray-600 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 text-sm">
@@ -359,9 +391,6 @@ export default function LoginPage() {
                             </button>
                             <button className="text-gray-600 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 text-sm">
                                 Terms of Service
-                            </button>
-                            <button className="text-gray-600 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 text-sm">
-                                Cookies
                             </button>
                         </div>
                     </div>

@@ -17,7 +17,6 @@ import {
 } from '@/components/ui/select';
 import { Plus, Loader2 } from 'lucide-react';
 import { useBalanceOperations } from '@/hooks/useBalanceOperations';
-import { supabase } from '@/lib/supabase';
 import type { Balance, NewBalance } from '@/types';
 import { DeleteAccountDialog } from '@/components/cards/delete-card';
 import { BankCard } from '@/components/cards/bank-card';

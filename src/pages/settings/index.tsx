@@ -13,7 +13,6 @@ import {
     Settings, User, Bell, Shield,
     Loader2, Camera
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useUserSession from '@/hooks/useUserSession';
@@ -36,7 +35,7 @@ export default function SettingsAndProfilePage() {
     const { user } = useUserSession()
     const [loading, setLoading] = useState(false);
     const [profileData, setProfileData] = useState<ProfileData>({
-        fullName: '',
+        fullName: user ? `${user.firstName || ''} ${user.lastName || ''}` : '',
         email: user?.email || '',
         phone: '',
         companyName: ''

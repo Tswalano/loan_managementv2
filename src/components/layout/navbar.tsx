@@ -23,7 +23,6 @@ import {
 import { useState } from 'react';
 import { ThemeToggle } from '../theme-toggle';
 import useUserSession from '@/hooks/useUserSession';
-// import { supabase } from '@/lib/supabase';
 
 const navigation = [
     { name: 'Dashboard', href: '/app', icon: LayoutDashboard },
@@ -45,7 +44,7 @@ export default function Navbar() {
         // if (error) {
         //     console.error('Error during logout:', error.message);
         // } else {
-        
+
         // }
     };
 
@@ -56,10 +55,10 @@ export default function Navbar() {
                     {/* Logo and Desktop Navigation */}
                     <div className="flex items-center gap-8">
                         <div className="flex-shrink-0">
-                            <span className="flex items-center text-2xl font-bold text-emerald-600 dark:text-emerald-500">
+                            <Link to="/" className="flex items-center text-2xl font-bold text-emerald-600 dark:text-emerald-500">
                                 <PiggyBank className="h-6 w-6 mr-2" />
                                 FinanceFlow
-                            </span>
+                            </Link>
                         </div>
                         <div className="hidden md:flex md:space-x-1">
                             {navigation.map((item) => (
