@@ -15,14 +15,12 @@ import { LoanPaymentDialog } from "./loan-payment-dialog";
 interface LoanTableProps {
     loans: Loan[];
     balances: Balance[];
-    refreshLoans: () => Promise<void>;
+    refreshLoans: () => void;
     handleLoanPayment: (payment: LoanPayment) => Promise<LoanTransactionResult>;
     loading: boolean;
-    setLoading: (loading: boolean) => void;
 }
 
 function LoanTableRecords({
-    setLoading,
     refreshLoans,
     handleLoanPayment,
     loading,
@@ -32,6 +30,7 @@ function LoanTableRecords({
     const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
     const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const handlePayment = (loan: Loan) => {
         setSelectedLoan(loan);
@@ -43,10 +42,8 @@ function LoanTableRecords({
         if (!selectedLoan) return;
 
         try {
-            setLoading(true);
+            setIsProcessing(true);
             setError(null);
-
-            if (!selectedLoan.accountId) return;
 
             const result = await handleLoanPayment({
                 loanId: payment.loanId,
@@ -57,7 +54,7 @@ function LoanTableRecords({
 
             if (result.success) {
                 setIsPaymentDialogOpen(false);
-                await refreshLoans();
+                refreshLoans();
             } else {
                 setError(result.error || 'Payment failed');
             }
@@ -65,13 +62,18 @@ function LoanTableRecords({
             setError(error instanceof Error ? error.message : 'Payment failed');
             console.error('Error processing payment:', error);
         } finally {
-            setLoading(false);
+            setIsProcessing(false);
         }
     };
 
-    // const filterLoanTransactions = (loan: Transaction) => {
-    //     return loan.type === 'LOAN_DISBURSEMENT' || loan.type === 'LOAN_PAYMENT';
-    // };
+    // handling loading state
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-48">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
+            </div>
+        );
+    }
 
     return (
         <>
@@ -123,17 +125,17 @@ function LoanTableRecords({
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                             <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                {loan.balance.bankName || '-'}
+                                                {loan.balance?.bankName || '-'}
                                             </div>
                                             <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                {loan.balance.accountReference || '-'}
+                                                {loan.balance?.accountReference || '-'}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 dark:text-gray-100">
-                                            {formatCurrency(parseFloat(loan.amount || '0'))}
+                                            {formatCurrency(parseFloat(loan.principalAmount || '0'))}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 dark:text-gray-100">
-                                            {formatCurrency(parseFloat(loan.remainingBalance || '0'))}
+                                            {formatCurrency(parseFloat(loan.outstandingBalance || '0'))}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center">
                                             <span className={`px-2 py-1 text-xs rounded-full font-medium ${loan.status === 'ACTIVE'
@@ -152,7 +154,7 @@ function LoanTableRecords({
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handlePayment(loan)}
-                                                disabled={loan.status !== 'ACTIVE'}
+                                                disabled={loan.status !== 'ACTIVE' || isProcessing}
                                                 className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 
                                                     text-emerald-600 dark:text-emerald-400 hover:bg-gray-100 dark:hover:bg-gray-700 
                                                     hover:text-emerald-700 dark:hover:text-emerald-300 disabled:opacity-50 
@@ -180,8 +182,7 @@ function LoanTableRecords({
                         setError(null);
                     }}
                     onSubmit={handlePaymentSubmit}
-                    isLoading={loading}
-                // error={error || null}
+                    isLoading={isProcessing}
                 />
             )}
         </>

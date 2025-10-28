@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import {
     LineChart,
     Line,
-    // BarChart,
-    // Bar,
+    BarChart,
+    Bar,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -14,7 +14,7 @@ import {
     Legend,
     AreaChart,
     Area,
-    // Cell
+    Cell
 } from 'recharts';
 import { formatCurrency } from '@/lib/utils/formatters';
 import { useTransactionMetrics } from '@/hooks/useTransactions';
@@ -255,7 +255,7 @@ export const DashboardCharts: React.FC = () => {
                 </Card>
 
                 {/* Transaction Type Distribution */}
-                {/* <Card className="bg-white dark:bg-gray-800">
+                <Card className="bg-white dark:bg-gray-800">
                     <CardHeader>
                         <CardTitle>Transaction Distribution</CardTitle>
                         <CardDescription>Breakdown by transaction type</CardDescription>
@@ -302,10 +302,10 @@ export const DashboardCharts: React.FC = () => {
                             </ResponsiveContainer>
                         </div>
                     </CardContent>
-                </Card> */}
+                </Card>
 
                 {/* Active Loans Trend */}
-                {/* <Card className="bg-white dark:bg-gray-800">
+                <Card className="bg-white dark:bg-gray-800">
                     <CardHeader>
                         <CardTitle>Active Loans Trend</CardTitle>
                         <CardDescription>Monthly active loans count</CardDescription>
@@ -340,7 +340,7 @@ export const DashboardCharts: React.FC = () => {
                             </ResponsiveContainer>
                         </div>
                     </CardContent>
-                </Card> */}
+                </Card>
             </div>
         </div>
     );

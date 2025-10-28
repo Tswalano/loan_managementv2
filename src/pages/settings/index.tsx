@@ -32,12 +32,12 @@ interface NotificationSettings {
 
 export default function SettingsAndProfilePage() {
     const { toast } = useToast();
-    const { user } = useUserSession()
+    const { user } = useUserSession();
     const [loading, setLoading] = useState(false);
     const [profileData, setProfileData] = useState<ProfileData>({
-        fullName: user ? `${user.firstName || ''} ${user.lastName || ''}` : '',
+        fullName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
         email: user?.email || '',
-        phone: '',
+        phone: user?.phoneNumber || '',
         companyName: ''
     });
     const [notifications, setNotifications] = useState<NotificationSettings>({
@@ -47,13 +47,28 @@ export default function SettingsAndProfilePage() {
     });
 
     const handleUpdateProfile = async () => {
+        if (!user) {
+            toast({
+                title: "Error",
+                description: "You must be logged in to update your profile.",
+                variant: "destructive",
+            });
+            return;
+        }
+
         try {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('No user found');
 
-            // Update profile logic here
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+            // TODO: Implement profile update logic with your backend
+            // Example:
+            // await fetch(`${BACKEND_API_URL}/users/${user.id}`, {
+            //     method: 'PUT',
+            //     headers: getAuthHeaders(),
+            //     body: JSON.stringify(profileData)
+            // });
+
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
             toast({
                 title: "Profile updated",
@@ -274,7 +289,7 @@ export default function SettingsAndProfilePage() {
                                             <p className="text-sm text-gray-600 dark:text-gray-400">
                                                 Last login: Today at 10:45 AM
                                                 <br />
-                                                Location: New York, United States
+                                                Location: Johannesburg, South Africa
                                             </p>
                                         </div>
                                     </div>

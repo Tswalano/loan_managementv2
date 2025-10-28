@@ -52,10 +52,10 @@ export interface Balance {
     id: string;
     userId: string;
     type: AccountType;
-    accountReference?: string;
-    bankName?: string;
-    accountName?: string;
-    currentBalance: string;
+    accountNumber: string;
+    bankName: string;
+    accountName: string;
+    balance: string;
     previousBalance?: string;
     lastTransactionId?: string | null;
     accountStatus: AccountStatus;
@@ -66,11 +66,12 @@ export interface Balance {
 export interface NewBalance {
     userId: string;
     type: AccountType;
-    accountReference?: string;
-    bankName?: string;
-    accountName?: string;
-    currentBalance?: string;
-    accountStatus?: AccountStatus;
+    accountNumber: string;
+    bankName: string;
+    accountName: string;
+    balance: number;
+    previousBalance: number;
+    accountStatus: AccountStatus;
 }
 
 // -----------------------------------------------------------------------------
@@ -83,7 +84,7 @@ export interface Transaction {
     date: string;
     type: TransactionType;
     category: string;
-    amount: number | string;
+    amount: number;
     description?: string;
     reference: string;
     fromBalanceId?: string;

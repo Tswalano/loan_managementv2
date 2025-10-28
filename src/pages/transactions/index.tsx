@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Search, Download, Calendar, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatCurrency, formatShortDate, generateReferenceNumber, truncateText } from '@/lib/utils/formatters';
-import type { Transaction, LoanTransactionType, NewTransaction } from '@/types';
+import type { Transaction, TransactionType, NewTransaction } from '@/types';
 import ViewTransactionDialog from '@/components/transactions/transaction-dialog';
 import TransactionForm from '@/components/transactions/transaction-form';
 import { useBalanceOperations } from '@/hooks/useBalanceOperations';
@@ -34,7 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function TransactionsPage() {
     const { toast } = useToast();
     const [isNewTransactionOpen, setIsNewTransactionOpen] = useState(false);
-    const [selectedType, setSelectedType] = useState<LoanTransactionType | 'ALL'>('ALL');
+    const [selectedType, setSelectedType] = useState<TransactionType | 'ALL'>('ALL');
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [viewTransaction, setViewTransaction] = useState<Transaction | null>(null);
 
@@ -44,12 +44,10 @@ export default function TransactionsPage() {
     const rowOptions = [10, 20, 50];
 
     const {
-        loading,
+        isLoading,
         error,
         transactions,
         balances,
-        fetchTransactions,
-        setLoading,
         recordExpense,
         recordTransaction,
     } = useBalanceOperations();
@@ -58,14 +56,13 @@ export default function TransactionsPage() {
         if (error) {
             toast({
                 title: "Error Loading Transactions",
-                description: error.toString(),
+                description: (error as Error).message,
                 variant: "destructive",
             });
         }
     }, [error, toast]);
 
     const handleTransactionCreate = async (formData: NewTransaction) => {
-        setLoading(true);
         try {
             if (formData.type === 'EXPENSE') {
                 const reference = generateReferenceNumber('EXPENSE');
@@ -81,7 +78,7 @@ export default function TransactionsPage() {
                 });
             } else {
                 const reference = generateReferenceNumber('INCOME');
-                await recordTransaction({
+                await recordTransaction.mutateAsync({
                     date: formData.date,
                     amount: formData.amount.toString(),
                     type: formData.type,
@@ -93,7 +90,6 @@ export default function TransactionsPage() {
                 });
             }
 
-            await fetchTransactions();
             toast({
                 title: "Success",
                 description: "Transaction created successfully",
@@ -101,25 +97,23 @@ export default function TransactionsPage() {
             });
             setIsNewTransactionOpen(false);
         } catch (error) {
-            console.log("Error,", error)
+            console.log("Error,", error);
             toast({
                 title: "Error",
                 description: "Failed to create transaction. Please try again.",
                 variant: "destructive",
             });
-        } finally {
-            setLoading(false);
         }
     };
 
-    const getTypeColor = (type: LoanTransactionType): string => {
-        const colors = {
+    const getTypeColor = (type: TransactionType): string => {
+        const colors: Partial<Record<TransactionType, string>> = {
             INCOME: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400',
             EXPENSE: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400',
             LOAN_PAYMENT: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400',
             LOAN_DISBURSEMENT: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
         };
-        return colors[type] || colors.EXPENSE;
+        return colors[type] ?? 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400';
     };
 
     const filteredTransactions = transactions.filter(transaction => {
@@ -182,7 +176,7 @@ export default function TransactionsPage() {
         </div>
     );
 
-    if (loading && transactions.length === 0) {
+    if (isLoading && transactions.length === 0) {
         return (
             <div className="flex items-center justify-center h-screen">
                 <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
@@ -190,7 +184,7 @@ export default function TransactionsPage() {
         );
     }
 
-    if (!loading && transactions.length === 0) {
+    if (!isLoading && transactions.length === 0) {
         return (
             <>
                 <EmptyState />
@@ -307,7 +301,7 @@ export default function TransactionsPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                <div className="rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div className="rounded-lg border border-gray-200 dark:border-gray-700">
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-gray-50 dark:bg-gray-800/50">
@@ -319,7 +313,7 @@ export default function TransactionsPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {loading ? (
+                                {isLoading ? (
                                     <TableRow>
                                         <TableCell colSpan={5} className="text-center py-8">
                                             <div className="flex items-center justify-center text-gray-500 dark:text-gray-400">

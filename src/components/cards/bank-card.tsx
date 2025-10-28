@@ -5,7 +5,7 @@ import { CreditCard } from 'lucide-react';
 
 interface BankCardProps {
     accountName: string;
-    accountReference: string;
+    accountNumber: string;
     bankName: string;
     currentBalance: string;
     onClick: () => void;
@@ -24,7 +24,7 @@ const BANK_COLORS = {
 
 export const BankCard: React.FC<BankCardProps> = ({
     accountName,
-    accountReference,
+    accountNumber,
     bankName,
     currentBalance,
     onClick
@@ -60,7 +60,7 @@ export const BankCard: React.FC<BankCardProps> = ({
                     </div>
 
                     <p className="font-mono text-sm tracking-widest text-white/90">
-                        {accountReference.replace(/-/g, ' ')}
+                        {accountNumber.replace(/-/g, ' ')}
                     </p>
                 </div>
 

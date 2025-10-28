@@ -38,25 +38,16 @@ export default function LoanSummaryPage() {
     const [isAlertOpen, setIsAlertOpen] = useState(false);
     const [isNewLoanOpen, setIsNewLoanOpen] = useState(false);
     const {
-        loading,
+        isLoading,
         error,
-        fetchTransactions,
+        refetchTransactions,
         recordLoanPayment,
         loans,
         balances,
-        setLoading, recordExpense
+        recordExpense
     } = useBalanceOperations();
 
     const metrics = useMemo(() => calculateLoanMetrics(loans), [loans]);
-    // const monthlyData = useMemo(() => calculateMonthlyData(transactions), [transactions]);
-    // const totalBalance = useMemo(() =>
-    //     balances.reduce((sum, balance) => sum + Number(balance.currentBalance || 0), 0),
-    //     [balances]
-    // );
-
-    // const loanTransactions = transactions.filter(
-    //     tx => tx.type === 'LOAN_DISBURSEMENT'
-    // );
 
     const statusDistribution = [
         { name: 'Active', value: loans.filter(loan => loan.status === 'ACTIVE').length },
@@ -65,17 +56,14 @@ export default function LoanSummaryPage() {
     ];
 
     const loansBySize = [
-        { range: '< 999', count: loans.filter(loan => parseFloat(loan.amount) <= 999).length },
-        { range: '1k - 1.9k', count: loans.filter(loan => parseFloat(loan.amount) >= 1000 && parseFloat(loan.amount) <= 1999).length },
-        { range: '2k - 3.9k', count: loans.filter(loan => parseFloat(loan.amount) >= 2000 && parseFloat(loan.amount) <= 3999).length },
-        { range: '4k+', count: loans.filter(loan => parseFloat(loan.amount) >= 4000).length },
+        { range: '< 999', count: loans.filter(loan => parseFloat(loan.principalAmount) <= 999).length },
+        { range: '1k - 1.9k', count: loans.filter(loan => parseFloat(loan.principalAmount) >= 1000 && parseFloat(loan.principalAmount) <= 1999).length },
+        { range: '2k - 3.9k', count: loans.filter(loan => parseFloat(loan.principalAmount) >= 2000 && parseFloat(loan.principalAmount) <= 3999).length },
+        { range: '4k+', count: loans.filter(loan => parseFloat(loan.principalAmount) >= 4000).length },
     ];
 
     const handleCreateLoan = async (lData: NewTransaction) => {
-
         try {
-            setLoading(true)
-
             console.log("Creating transaction:", lData);
 
             if (!lData.fromBalanceId) {
@@ -85,29 +73,44 @@ export default function LoanSummaryPage() {
             const e = await recordExpense({ ...lData });
             console.log("Expense created:", e);
 
-
+            setIsNewLoanOpen(false);
         } catch (error) {
             console.error('Error creating loan:', error);
             setIsAlertOpen(true);
-        } finally {
-            setLoading(false)
-            setIsNewLoanOpen(false);
         }
     };
 
+    async function handleLoanPayment(payment: LoanPayment) {
+        try {
+            console.log("Processing loan payment:", payment);
 
-    // if (error) {
-    //     return (
-    //         <ErrorComponent
-    //             isOpen={isAlertOpen}
-    //             onClose={() => setIsAlertOpen(false)}
-    //             title="Error occurred"
-    //             message={error}
-    //         />
-    //     );
-    // }
+            if (!payment.accountId) {
+                throw new Error('No loan selected');
+            }
 
-    if (loading) {
+            const result = await recordLoanPayment.mutateAsync({
+                amount: payment.amount || 0,
+                loanId: payment.loanId,
+                toBalanceId: payment.accountId,
+                description: payment.description,
+            });
+
+            console.log("Loan payment result:", result);
+
+            return {
+                success: true,
+                transaction: result
+            };
+        } catch (error) {
+            console.error('Error processing payment:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Payment failed'
+            };
+        }
+    }
+
+    if (isLoading) {
         return (
             <div className="flex items-center justify-center h-[50vh]">
                 <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
@@ -137,7 +140,6 @@ export default function LoanSummaryPage() {
                 </div>
 
                 <Card>
-                    {/* bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow duration-200 */}
                     <CardContent className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800">
                         <div className="rounded-full bg-emerald-100 dark:bg-emerald-900/20 p-3 mb-4">
                             <Plus className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
@@ -161,43 +163,10 @@ export default function LoanSummaryPage() {
                     open={isNewLoanOpen}
                     onClose={() => setIsNewLoanOpen(false)}
                     onSubmit={handleCreateLoan}
-                    balances={balances} />
+                    balances={balances}
+                />
             </div>
         );
-    }
-
-    async function handleLoanPayment(payment: LoanPayment) {
-        try {
-
-            console.log("Processing loan payment:", payment);
-            
-
-
-            if(!payment.accountId) {
-                throw new Error('No loan selected');
-            }
-
-            const result = await recordLoanPayment({
-                amount: payment.amount || 0,
-                loanId: payment.loanId,
-                toBalanceId: payment.accountId,
-                description: payment.description,
-            });
-
-            console.log("Loan payment result:", result);
-
-
-            return {
-                success: true,
-                transaction: result
-            };
-        } catch (error) {
-            console.error('Error processing payment:', error);
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Payment failed'
-            };
-        }
     }
 
     return (
@@ -242,7 +211,6 @@ export default function LoanSummaryPage() {
 
             {/* Key Metrics */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {/* Your existing metrics cards... */}
                 <Card className="bg-white dark:bg-gray-800">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -294,7 +262,6 @@ export default function LoanSummaryPage() {
 
             {/* Charts Section */}
             <div className="grid gap-6 md:grid-cols-2">
-                {/* Your existing charts... */}
                 <Card className="bg-white dark:bg-gray-800">
                     <CardHeader>
                         <CardTitle>Loan Status Distribution</CardTitle>
@@ -359,9 +326,8 @@ export default function LoanSummaryPage() {
             <LoanTableRecords
                 loans={loans}
                 balances={balances}
-                loading={loading}
-                setLoading={setLoading}
-                refreshLoans={fetchTransactions}
+                loading={isLoading}
+                refreshLoans={refetchTransactions}
                 handleLoanPayment={handleLoanPayment}
             />
 
@@ -378,7 +344,7 @@ export default function LoanSummaryPage() {
                     isOpen={isAlertOpen}
                     onClose={() => setIsAlertOpen(false)}
                     title="Error occurred"
-                    message={error}
+                    message={(error as Error).message}
                 />
             )}
         </div>

@@ -285,6 +285,9 @@ app.post('/balances', async (c) => {
         const newBalance = {
             userId: body.userId,
             type: body.type,
+            bankName: body.bankName ?? 'UNSPECIFIED_BANK',
+            accountName: body.accountName ?? 'Unnamed Account',
+            previousBalance: body.previousBalance ?? 0.00,
             accountStatus: body.accountStatus ?? 'ACTIVE',
             balance: body.balance ?? '0.00',
             accountNumber: body.accountNumber ?? `ACC-${Date.now()}`,
@@ -309,7 +312,6 @@ app.post('/balances', async (c) => {
         }, 500);
     }
 });
-
 
 // Get balances for a user
 app.get('/balances/:userId', async (c) => {

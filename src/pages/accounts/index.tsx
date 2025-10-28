@@ -21,6 +21,7 @@ import type { Balance, NewBalance } from '@/types';
 import { DeleteAccountDialog } from '@/components/cards/delete-card';
 import { BankCard } from '@/components/cards/bank-card';
 import { useToast } from '@/hooks/use-toast';
+import useUserSession from '@/hooks/useUserSession';
 
 const BANKS = {
     FNB: 'First National Bank',
@@ -38,19 +39,18 @@ type BankKey = keyof typeof BANKS;
 interface AccountFormData {
     accountName: string;
     bankName: BankKey;
-    initialBalance: string;
+    initialBalance: number;
 }
 
 export default function AccountManagementPage() {
-    const { balances, loading, createBalance, deleteBalance } = useBalanceOperations();
+    const { user } = useUserSession();
+    const { balances, isLoading, createBalance, deleteBalance } = useBalanceOperations();
     const { toast } = useToast();
-    const [isCreating, setIsCreating] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
     const [selectedAccount, setSelectedAccount] = useState<Balance | null>(null);
     const [formData, setFormData] = useState<AccountFormData>({
         accountName: '',
         bankName: 'FNB',
-        initialBalance: '0'
+        initialBalance: 0
     });
 
     const generateAccountNumber = () => {
@@ -62,22 +62,28 @@ export default function AccountManagementPage() {
     };
 
     const handleCreateAccount = async () => {
-        try {
-            setIsCreating(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('No user found');
+        if (!user) {
+            toast({
+                title: "Error",
+                description: "You must be logged in to create an account.",
+                variant: "destructive",
+            });
+            return;
+        }
 
+        try {
             const newBalance: NewBalance = {
                 userId: user.id,
-                accountReference: generateAccountNumber(),
-                currentBalance: formData.initialBalance,
+                accountNumber: generateAccountNumber(),
+                balance: formData.initialBalance,
                 bankName: BANKS[formData.bankName],
                 accountName: formData.accountName || BANKS[formData.bankName],
+                previousBalance: 0,
                 accountStatus: 'ACTIVE',
                 type: 'BANK'
             };
 
-            await createBalance(newBalance);
+            await createBalance.mutateAsync(newBalance);
 
             toast({
                 title: "Account created",
@@ -87,7 +93,7 @@ export default function AccountManagementPage() {
             setFormData({
                 accountName: '',
                 bankName: 'FNB',
-                initialBalance: '0'
+                initialBalance: 0
             });
         } catch (error) {
             toast({
@@ -96,8 +102,6 @@ export default function AccountManagementPage() {
                 variant: "destructive",
             });
             console.error('Failed to create account:', error);
-        } finally {
-            setIsCreating(false);
         }
     };
 
@@ -105,8 +109,7 @@ export default function AccountManagementPage() {
         if (!selectedAccount) return;
 
         try {
-            setIsDeleting(true);
-            await deleteBalance(selectedAccount.id);
+            await deleteBalance.mutateAsync(selectedAccount.id);
 
             toast({
                 title: "Account deleted",
@@ -121,8 +124,6 @@ export default function AccountManagementPage() {
                 variant: "destructive",
             });
             console.error('Failed to delete account:', error);
-        } finally {
-            setIsDeleting(false);
         }
     };
 
@@ -192,7 +193,7 @@ export default function AccountManagementPage() {
                                             type="number"
                                             placeholder="0.00"
                                             value={formData.initialBalance}
-                                            onChange={(e) => setFormData({ ...formData, initialBalance: e.target.value })}
+                                            onChange={(e) => setFormData({ ...formData, initialBalance: parseFloat(e.target.value) })}
                                             className="bg-white dark:bg-gray-800"
                                         />
                                     </div>
@@ -201,9 +202,9 @@ export default function AccountManagementPage() {
                                         type="submit"
                                         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
                                         onClick={handleCreateAccount}
-                                        disabled={isCreating}
+                                        disabled={createBalance.isPending}
                                     >
-                                        {isCreating ? (
+                                        {createBalance.isPending ? (
                                             <>
                                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                                 Creating...
@@ -223,7 +224,7 @@ export default function AccountManagementPage() {
 
                 {/* Bank Cards Grid - On the right */}
                 <div className="lg:col-span-8">
-                    {loading ? (
+                    {isLoading ? (
                         <div className="flex items-center justify-center h-48">
                             <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
                         </div>
@@ -244,9 +245,9 @@ export default function AccountManagementPage() {
                                 <BankCard
                                     key={balance.id}
                                     accountName={balance.accountName}
-                                    accountReference={balance.accountReference}
+                                    accountNumber={balance.accountNumber}
                                     bankName={balance.bankName}
-                                    currentBalance={balance.currentBalance}
+                                    currentBalance={balance.balance}
                                     onClick={() => setSelectedAccount(balance)}
                                 />
                             ))}
@@ -263,8 +264,8 @@ export default function AccountManagementPage() {
                     onConfirm={handleDeleteAccount}
                     accountName={selectedAccount.accountName}
                     bankName={selectedAccount.bankName}
-                    balance={selectedAccount.currentBalance}
-                    isDeleting={isDeleting}
+                    balance={selectedAccount.balance}
+                    isDeleting={deleteBalance.isPending}
                 />
             )}
         </div>

@@ -3,7 +3,7 @@ import { relations } from 'drizzle-orm';
 
 // Enums
 export const accountStatusEnum = pgEnum('account_status', ['ACTIVE', 'INACTIVE', 'SUSPENDED']);
-export const accountTypeEnum = pgEnum('account_type', ['SAVINGS', 'CHECKING', 'LOAN', 'INVESTMENT']);
+export const accountTypeEnum = pgEnum('account_type', ['SAVINGS', 'CHECKING', 'LOAN', 'INVESTMENT', 'CASH', 'BANK', 'MOBILE_MONEY', 'LOAN_RECEIVABLE']);
 export const transactionTypeEnum = pgEnum('transaction_type', [
     'DEPOSIT',
     'WITHDRAWAL',
@@ -34,9 +34,13 @@ export const balances = pgTable('balances', {
     id: uuid('id').defaultRandom().primaryKey(),
     userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
     type: accountTypeEnum('type').notNull(),
+    bankName: text('bank_name'),
     accountStatus: accountStatusEnum('account_status').default('ACTIVE').notNull(),
-    balance: decimal('balance', { precision: 15, scale: 2 }).default('0.00').notNull(),
     accountNumber: text('account_number').unique(),
+    accountName: text('account_name'),
+    balance: decimal('balance', { precision: 15, scale: 2 }).default('0.00').notNull(),
+    previousBalance: decimal('previous_balance', { precision: 15, scale: 2 }),
+    // lastTransactionId: uuid('last_transaction_id').references(() => transactions.id),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
