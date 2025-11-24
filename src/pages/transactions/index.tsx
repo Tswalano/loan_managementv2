@@ -25,10 +25,9 @@ import {
 } from "@/components/ui/table";
 import { Plus, Search, Download, Calendar, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatCurrency, formatShortDate, generateReferenceNumber, truncateText } from '@/lib/utils/formatters';
-import type { Transaction, TransactionType, NewTransaction } from '@/types';
+import type { Transaction, TransactionType } from '@/types';
 import ViewTransactionDialog from '@/components/transactions/transaction-dialog';
 import TransactionForm from '@/components/transactions/transaction-form';
-import { useBalanceOperations } from '@/hooks/useBalanceOperations';
 import { useToast } from "@/hooks/use-toast";
 
 export default function TransactionsPage() {
@@ -42,15 +41,6 @@ export default function TransactionsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const rowOptions = [10, 20, 50];
-
-    const {
-        isLoading,
-        error,
-        transactions,
-        balances,
-        recordExpense,
-        recordTransaction,
-    } = useBalanceOperations();
 
     useEffect(() => {
         if (error) {

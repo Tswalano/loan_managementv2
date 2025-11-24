@@ -1,4 +1,4 @@
-import { FormTransactionData, LoanTransactionType } from "@/types";
+import { FormTransactionData, TransactionType } from "@/types";
 import { formalize, generateReferenceNumber } from "../utils/formatters";
 
 // Helper functions
@@ -23,26 +23,82 @@ export function calculateTotalInterest(amount: number, interestRate: number, ter
     return (amount * (interestRate / 100) * (term / 12));
 }
 
-export const generateTransactionData = (data: FormTransactionData, type: LoanTransactionType) => {
-    // const interestRate = data.interestRate ?? 0; // Default to 0 if interestRate is undefined
-    // const totalInterest = (data.amount * interestRate) / 100; // Correct calculation
-    // const remainingBalance = data.amount + totalInterest; // Add the calculated interest to amount
+// export const generateTransactionData = (data: FormTransactionData, type: TransactionType) => {
+//     // const interestRate = data.interestRate ?? 0; // Default to 0 if interestRate is undefined
+//     // const totalInterest = (data.amount * interestRate) / 100; // Correct calculation
+//     // const remainingBalance = data.amount + totalInterest; // Add the calculated interest to amount
 
+//     return {
+//         //   loanStatus: type === "LOAN_DISBURSEMENT" ? "ACTIVE" : null as LoanStatus | null,
+//         //   paymentsMade: type === "LOAN_PAYMENT" ? String(data.amount) : "0",
+//         //   totalInterest: totalInterest.toFixed(2), // Ensure totalInterest is a string with 2 decimal places
+//         //   remainingBalance: remainingBalance.toFixed(2), // Ensure remainingBalance is a string with 2 decimal places
+//         //   interestRate: 30, // Convert interestRate to string
+//         fromBalanceId: type === "INCOME" || type === "LOAN_PAYMENT" ? null : data.fromBalanceId,
+//         toBalanceId: type === "INCOME" || type === "LOAN_PAYMENT" ? data.fromBalanceId : null,
+//         date: data.date || new Date(),
+//         type: type,
+//         category: `${data.description} - ${formalize(type)}`,
+//         amount: data.amount.toString(),
+//         reference: generateReferenceNumber(type),
+//         description: `${data.description} - ${formalize(type)}`,
+//         isLoanDisbursement: type === "LOAN_DISBURSEMENT" ? true : false,
+//         isLoanPayment: type === "LOAN_PAYMENT" ? true : false
+//     };
+// };
+
+export const generateTransactionData = (
+    data: FormTransactionData,
+    type: TransactionType,
+    userId: string,
+    loanId?: string
+) => {
     return {
-        //   loanStatus: type === "LOAN_DISBURSEMENT" ? "ACTIVE" : null as LoanStatus | null,
-        //   paymentsMade: type === "LOAN_PAYMENT" ? String(data.amount) : "0",
-        //   totalInterest: totalInterest.toFixed(2), // Ensure totalInterest is a string with 2 decimal places
-        //   remainingBalance: remainingBalance.toFixed(2), // Ensure remainingBalance is a string with 2 decimal places
-        //   interestRate: 30, // Convert interestRate to string
-        fromBalanceId: type === "INCOME" || type === "LOAN_PAYMENT" ? null : data.fromBalanceId,
-        toBalanceId: type === "INCOME" || type === "LOAN_PAYMENT" ? data.fromBalanceId : null,
-        date: data.date || new Date(),
-        type: type,
-        category: `${data.description} - ${formalize(type)}`,
+        userId,
         amount: data.amount.toString(),
-        reference: generateReferenceNumber(type),
+        type,
+        category: `${data.description} - ${formalize(type)}`,
         description: `${data.description} - ${formalize(type)}`,
-        isLoanDisbursement: type === "LOAN_DISBURSEMENT" ? true : false,
-        isLoanPayment: type === "LOAN_PAYMENT" ? true : false
+        reference: generateReferenceNumber(type),
+        fromBalanceId:
+            type === 'INCOME' || type === 'LOAN_PAYMENT'
+                ? undefined
+                : data.fromBalanceId,
+        toBalanceId:
+            type === 'INCOME' || type === 'LOAN_PAYMENT'
+                ? data.fromBalanceId
+                : data.toBalanceId,
+        loanId: loanId ?? undefined,
+        isLoanDisbursement: type === 'LOAN_DISBURSEMENT',
+        isLoanPayment: type === 'LOAN_PAYMENT',
     };
 };
+
+// export const generateTransactionData = (
+//     data: FormTransactionData,
+//     type: TransactionType,
+//     userId: string,
+//     loanId?: string
+// ) => {
+
+//     return {
+//         userId,
+//         amount: data.amount.toString(), // ✅ decimal expects string
+//         type,
+//         category: `${data.description} - ${formalize(type)}`,
+//         description: `${data.description} - ${formalize(type)}`,
+//         reference: generateReferenceNumber(type),
+//         fromBalanceId:
+//             type === 'INCOME' || type === 'LOAN_PAYMENT'
+//                 ? undefined
+//                 : data.fromBalanceId,
+//         toBalanceId:
+//             type === 'INCOME' || type === 'LOAN_PAYMENT'
+//                 ? data.fromBalanceId
+//                 : undefined,
+//         loanId: loanId ?? undefined, // ✅ optional
+//         // date: parsedDate, // ✅ timestamp expects Date
+//         isLoanDisbursement: type === 'LOAN_DISBURSEMENT',
+//         isLoanPayment: type === 'LOAN_PAYMENT',
+//     };
+// };

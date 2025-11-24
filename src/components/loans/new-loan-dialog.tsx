@@ -16,17 +16,17 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { formatCurrency } from "@/lib/utils/formatters";
-import { Balance, FormTransactionData, NewTransaction } from "@/types";
+import { Balance, NewTransaction, TransactionType } from "@/types";
 import { generateTransactionData } from "@/lib/utils/helper";
 
 const loanSchema = z.object({
     description: z.string().min(2, "Borrower name is required"),
-    fromBalanceId: z.string().min(2, "Bank name is required"),
+    fromBalanceId: z.string().min(1, "Bank selection is required"),
     amount: z.number().positive('Amount must be positive'),
     interestRate: z.number().positive('Interest rate must be positive'),
-    // date: z.date().max(new Date(), "Date must be in the past"),
 });
 
+type LoanFormData = z.infer<typeof loanSchema>;
 
 interface NewLoanDialogProps {
     open: boolean;
@@ -36,59 +36,47 @@ interface NewLoanDialogProps {
 }
 
 export function NewLoanDialog({ open, onClose, onSubmit, balances }: NewLoanDialogProps) {
-    // const [date, setDate] = React.useState<Date>()
-    const form = useForm({
+    const form = useForm<LoanFormData>({
         resolver: zodResolver(loanSchema),
         defaultValues: {
             description: '',
             amount: 0,
             interestRate: 30,
             fromBalanceId: '',
-            date: new Date(),
         }
     });
 
-    const handleSubmit = async (data: FormTransactionData) => {
+    const handleSubmit = async (data: LoanFormData) => {
         try {
-            console.log("Creating transaction:", data);
+            console.log("Creating loan transaction:", data);
 
-            const loanData: NewTransaction = generateTransactionData(data, "LOAN_DISBURSEMENT");
+            // Example: use the appropriate type based on context
+            const transactionType: TransactionType = 'LOAN_DISBURSEMENT';
+            // or 'LOAN_PAYMENT' depending on the form
 
-            // You'll need to transform the data object into a NewTransaction object
-            // before calling onSubmit
-            // const newTransaction: NewTransaction = {
-            //     ...data,
-            //     date: data.date || new Date().toISOString(),
-            //     amount: String(data.amount),
-            //     type: "LOAN_DISBURSEMENT",
-            //     loanStatus: "ACTIVE",
-            //     interestRate: String(data.interestRate),
-            //     category: data.description,
-            //     fromBalanceId: data.fromBalanceId,
-            //     reference: generateReferenceNumber("LOAN_DISBURSEMENT")
-            // };
+            // Generate the clean transaction object for API
+            const loanData: NewTransaction = generateTransactionData(
+                {
+                    ...data,
+                    fromBalanceId: data.fromBalanceId ?? '',
+                    toBalanceId: data.fromBalanceId ?? data.fromBalanceId, // optional, safe fallback
+                    date: new Date(), // replace with real date
+                },
+                transactionType,
+                'user123', // replace with real userId from session
+                // data. // optional, only for LOAN_PAYMENT
+            );
 
+            // Send it to your API
             await onSubmit(loanData);
 
             form.reset();
             onClose();
-
         } catch (error) {
-            console.error('Error creating transaction:', error);
+            console.error('Error creating loan:', error);
         }
     };
 
-    // const calculateMonthlyPayment = () => {
-    //     const amount = form.getValues('amount');
-    //     const rate = form.getValues('interestRate') / 100 / 12;
-    //     const term = 1;
-
-    //     if (amount && rate && term) {
-    //         const monthlyPayment = (amount * rate * Math.pow(1 + rate, term)) / (Math.pow(1 + rate, term) - 1);
-    //         return monthlyPayment;
-    //     }
-    //     return 0;
-    // };
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
@@ -107,6 +95,7 @@ export function NewLoanDialog({ open, onClose, onSubmit, balances }: NewLoanDial
                             <Label className="text-gray-700 dark:text-gray-300">Borrower Name</Label>
                             <Input
                                 {...form.register('description')}
+                                placeholder="Enter borrower name"
                                 className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500"
                             />
                             {form.formState.errors.description && (
@@ -122,6 +111,7 @@ export function NewLoanDialog({ open, onClose, onSubmit, balances }: NewLoanDial
                                 <Input
                                     type="number"
                                     step="0.01"
+                                    placeholder="0.00"
                                     {...form.register('amount', { valueAsNumber: true })}
                                     className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500"
                                 />
@@ -138,7 +128,7 @@ export function NewLoanDialog({ open, onClose, onSubmit, balances }: NewLoanDial
                                     step="0.1"
                                     disabled
                                     {...form.register('interestRate', { valueAsNumber: true })}
-                                    className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500"
+                                    className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500 disabled:opacity-60"
                                 />
                                 {form.formState.errors.interestRate && (
                                     <p className="text-sm text-red-500 mt-1">
@@ -149,87 +139,77 @@ export function NewLoanDialog({ open, onClose, onSubmit, balances }: NewLoanDial
                         </div>
 
                         <div>
-                            <div>
-                                <Label className="text-gray-700 dark:text-gray-300">Transaction Bank</Label>
-                                <Select onValueChange={(bank) => form.setValue('fromBalanceId', bank)}>
-                                    <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500 w-full px-3 py-2 rounded-md">
-                                        <SelectValue placeholder="Select a Bank" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-white dark:bg-gray-900">
-                                        <SelectGroup >
-                                            <SelectLabel>Transaction Bank</SelectLabel>
-                                            {balances.map((balance) => (
+                            <Label className="text-gray-700 dark:text-gray-300">Disbursement Account</Label>
+                            <Select onValueChange={(value) => form.setValue('fromBalanceId', value)}>
+                                <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500 w-full">
+                                    <SelectValue placeholder="Select account to disburse from" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white dark:bg-gray-900">
+                                    <SelectGroup>
+                                        <SelectLabel>Available Accounts</SelectLabel>
+                                        {balances.length === 0 ? (
+                                            <div className="px-2 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                                No accounts available
+                                            </div>
+                                        ) : (
+                                            balances.map((balance) => (
                                                 <SelectItem key={balance.id} value={balance.id}>
-                                                    {balance.accountName} - {formatCurrency(parseFloat(balance.currentBalance))}
+                                                    <div className="flex items-center justify-between w-full">
+                                                        <span>{balance.accountName}</span>
+                                                        <span className="ml-2 text-gray-500">
+                                                            {formatCurrency(parseFloat(balance.balance || '0'))}
+                                                        </span>
+                                                    </div>
                                                 </SelectItem>
-                                            ))}
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
-                                {form.formState.errors.fromBalanceId && (
-                                    <p className="text-sm text-red-500 mt-1">
-                                        {form.formState.errors.fromBalanceId.message}
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* <div>
-                                <Label className="text-gray-700 dark:text-gray-300">Start Date</Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant={"outline"}
-                                            className={cn(
-                                                "w-full min-w-[120px] justify-start text-left font-normal bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500",
-                                                !form.watch('date') && "text-muted-foreground"
-                                            )}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {form.watch('date') ? format(form.watch('date'), "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500">
-                                        <Calendar
-                                            mode="single"
-                                            // selected={(date) => form.setValue('date', date)}
-                                            onSelect={(date) => form.setValue('date', date || new Date())}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                            </div> */}
+                                            ))
+                                        )}
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                            {form.formState.errors.fromBalanceId && (
+                                <p className="text-sm text-red-500 mt-1">
+                                    {form.formState.errors.fromBalanceId.message}
+                                </p>
+                            )}
                         </div>
 
                         {/* Loan Summary */}
                         {form.watch('amount') > 0 && form.watch('interestRate') > 0 && (
-                            <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                            <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
                                     Loan Summary
                                 </h4>
-                                <div className="space-y-1 text-sm">
+                                <div className="space-y-2 text-sm">
                                     <div className="flex justify-between">
-                                        <span className="text-gray-500 dark:text-gray-400">Interest Rate %</span>
+                                        <span className="text-gray-500 dark:text-gray-400">Principal Amount</span>
                                         <span className="font-medium text-gray-900 dark:text-gray-100">
-                                            {/* {formatCurrency(calculateMonthlyPayment())} */}
-                                            30%
+                                            {formatCurrency(form.watch('amount'))}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-500 dark:text-gray-400">Interest Rate</span>
+                                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                                            {form.watch('interestRate')}%
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-500 dark:text-gray-400">Total Interest</span>
-                                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                                        <span className="font-medium text-emerald-600 dark:text-emerald-400">
                                             {formatCurrency(
                                                 (form.watch('amount') * (form.watch('interestRate') / 100))
                                             )}
                                         </span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-500 dark:text-gray-400">Total Payment</span>
-                                        <span className="font-medium text-gray-900 dark:text-gray-100">
-                                            {formatCurrency(
-                                                form.watch('amount') +
-                                                (form.watch('amount') * (form.watch('interestRate') / 100))
-                                            )}
-                                        </span>
+                                    <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-700 dark:text-gray-300 font-medium">Total Repayment</span>
+                                            <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                                {formatCurrency(
+                                                    form.watch('amount') +
+                                                    (form.watch('amount') * (form.watch('interestRate') / 100))
+                                                )}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -240,16 +220,20 @@ export function NewLoanDialog({ open, onClose, onSubmit, balances }: NewLoanDial
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={onClose}
+                            onClick={() => {
+                                form.reset();
+                                onClose();
+                            }}
                             className="bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
                         >
                             Cancel
                         </Button>
                         <Button
                             type="submit"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            disabled={form.formState.isSubmitting}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
                         >
-                            Create Loan
+                            {form.formState.isSubmitting ? 'Creating...' : 'Create Loan'}
                         </Button>
                     </DialogFooter>
                 </form>

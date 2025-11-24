@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import useUserSession from '@/hooks/useUserSession';
+import { getCurrentUser } from '@/lib/auth';
 
 interface ProfileData {
     fullName: string;
@@ -32,7 +32,7 @@ interface NotificationSettings {
 
 export default function SettingsAndProfilePage() {
     const { toast } = useToast();
-    const { user } = useUserSession();
+    const user = getCurrentUser();
     const [loading, setLoading] = useState(false);
     const [profileData, setProfileData] = useState<ProfileData>({
         fullName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),

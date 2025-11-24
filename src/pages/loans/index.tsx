@@ -1,5 +1,3 @@
-// src/pages/loan-summary.tsx
-'use client';
 import { useMemo, useState } from 'react';
 import {
     Card,
@@ -27,7 +25,8 @@ import { Plus, Download, Calendar, Loader2 } from 'lucide-react';
 import { NewLoanDialog } from '@/components/loans/new-loan-dialog';
 import { CustomTooltip } from '@/components/charts/custom-tooltip';
 import LoanTableRecords from '@/components/loans/loan-table';
-import { useBalanceOperations } from '@/hooks/useBalanceOperations';
+import { api } from '@/lib/api';
+import { useFinanceData } from '@/lib/api';
 import { LoanPayment, NewTransaction } from '@/types';
 import { calculateLoanMetrics } from '@/components/dashboard/utils';
 import ErrorComponent from '@/components/error/error-component';
@@ -37,15 +36,13 @@ const COLORS = ['#10B981', '#F59E0B', '#EF4444']; // emerald, yellow, red
 export default function LoanSummaryPage() {
     const [isAlertOpen, setIsAlertOpen] = useState(false);
     const [isNewLoanOpen, setIsNewLoanOpen] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
     const {
         isLoading,
-        error,
-        refetchTransactions,
-        recordLoanPayment,
         loans,
         balances,
-        recordExpense
-    } = useBalanceOperations();
+    } = useFinanceData(); // NEW: Use combined hook
 
     const metrics = useMemo(() => calculateLoanMetrics(loans), [loans]);
 
@@ -64,18 +61,25 @@ export default function LoanSummaryPage() {
 
     const handleCreateLoan = async (lData: NewTransaction) => {
         try {
-            console.log("Creating transaction:", lData);
+            console.log("Creating loan transaction:", lData);
 
             if (!lData.fromBalanceId) {
                 throw new Error('No balance selected');
             }
 
-            const e = await recordExpense({ ...lData });
-            console.log("Expense created:", e);
+            // Use recordExpense for loan creation
+            await api.recordExpense({
+                amount: lData.amount,
+                category: lData.category,
+                description: lData.description,
+                fromBalanceId: lData.fromBalanceId,
+            });
 
+            console.log("Loan expense created successfully");
             setIsNewLoanOpen(false);
         } catch (error) {
             console.error('Error creating loan:', error);
+            setError(error instanceof Error ? error.message : 'Failed to create loan');
             setIsAlertOpen(true);
         }
     };
@@ -85,12 +89,11 @@ export default function LoanSummaryPage() {
             console.log("Processing loan payment:", payment);
 
             if (!payment.accountId) {
-                throw new Error('No loan selected');
+                throw new Error('No account selected');
             }
 
-            const result = await recordLoanPayment.mutateAsync({
-                amount: payment.amount || 0,
-                loanId: payment.loanId,
+            const result = await api.recordLoanPayment(payment.loanId, {
+                amount: payment.amount,
                 toBalanceId: payment.accountId,
                 description: payment.description,
             });
@@ -99,7 +102,7 @@ export default function LoanSummaryPage() {
 
             return {
                 success: true,
-                transaction: result
+                transaction: result.transaction
             };
         } catch (error) {
             console.error('Error processing payment:', error);
@@ -327,7 +330,9 @@ export default function LoanSummaryPage() {
                 loans={loans}
                 balances={balances}
                 loading={isLoading}
-                refreshLoans={refetchTransactions}
+                refreshLoans={async () => {
+                    // Data will refresh automatically via React Query
+                }}
                 handleLoanPayment={handleLoanPayment}
             />
 
@@ -344,7 +349,7 @@ export default function LoanSummaryPage() {
                     isOpen={isAlertOpen}
                     onClose={() => setIsAlertOpen(false)}
                     title="Error occurred"
-                    message={(error as Error).message}
+                    message={error}
                 />
             )}
         </div>

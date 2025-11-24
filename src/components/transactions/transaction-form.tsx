@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select"
 import { Balance, NewTransaction } from '@/types';
 import { formatCurrency, generateReferenceNumber } from '@/lib/utils/formatters';
+import { generateTransactionData } from '@/lib/utils/helper';
 
 const TransactionCategories = {
     INCOME: ['Salary', 'Interest Income', 'Late Fees', 'Penalties', 'Other Income'],
@@ -33,7 +34,17 @@ const TransactionCategories = {
     LOAN_DISBURSEMENT: ['New Loan', 'Loan Renewal']
 } as const;
 
-// type TransactionFormData = z.infer<typeof transactionFormSchema>;
+const transactionFormSchema = z.object({
+    type: z.enum(['INCOME', 'EXPENSE', 'LOAN_PAYMENT', 'LOAN_DISBURSEMENT']),
+    category: z.string().min(1, "Category is required"),
+    fromBalanceId: z.string().min(1, "Transaction account is required"),
+    amount: z.number().positive("Amount must be greater than 0"),
+    description: z.string().min(1, "Description is required"),
+    reference: z.string().optional(),
+    interestRate: z.number().optional().default(30),
+});
+
+type TransactionFormData = z.infer<typeof transactionFormSchema>;
 
 interface TransactionFormProps {
     open: boolean;
@@ -45,19 +56,7 @@ interface TransactionFormProps {
 export default function TransactionForm({ open, balances, onClose, onSubmit }: TransactionFormProps) {
     const [selectedType, setSelectedType] = useState<keyof typeof TransactionCategories>('INCOME');
 
-    const transactionFormSchema = z.object({
-        type: z.enum(['INCOME', 'EXPENSE', 'LOAN_PAYMENT', 'LOAN_DISBURSEMENT']),
-        category: z.string().min(1, "Category is required"),
-        fromBalanceId: z.string().min(1, "Transaction Bank is required"),
-        amount: z.number().positive("Amount must be greater than 0"),
-        description: z.string().min(1, "Description is required"),
-        reference: z.string().optional(),
-        interestRate: z.number().optional().default(30),
-    });
-
-    type NewTransaction = z.infer<typeof transactionFormSchema>;
-
-    const form = useForm<NewTransaction>({
+    const form = useForm<TransactionFormData>({
         resolver: zodResolver(transactionFormSchema),
         defaultValues: {
             type: 'INCOME',
@@ -70,30 +69,20 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
         },
     });
 
-    const handleSubmit: SubmitHandler<NewTransaction> = async (data) => {
+    const handleSubmit: SubmitHandler<TransactionFormData> = async (data) => {
         try {
 
-            if (data.type === 'LOAN_DISBURSEMENT' || data.type === 'EXPENSE') {
-                await onSubmit({
+            const transactionData: NewTransaction = generateTransactionData(
+                {
+                    ...data,
+                    fromBalanceId: data.fromBalanceId ?? '',
                     date: new Date(),
-                    type: data.type,
-                    category: data.category,
-                    description: `${data.category} - ${data.type} Expense`,
-                    amount: data.amount.toString(),
-                    reference: generateReferenceNumber(data.type),
-                    fromBalanceId: data.fromBalanceId
-                });
-            } else if (data.type === 'LOAN_PAYMENT' || data.type === 'INCOME') {
-                await onSubmit({
-                    date: new Date(),
-                    type: data.type,
-                    category: data.category,
-                    description: `${data.description} - ${data.category} of ${formatCurrency(data.amount)}`,
-                    amount: data.amount.toString(),
-                    reference: generateReferenceNumber(data.type),
-                    fromBalanceId: data.fromBalanceId,
-                });
-            }
+                },
+                data.type,
+                "user123"
+            );
+
+            await onSubmit(transactionData);
 
             form.reset();
             onClose();
@@ -102,9 +91,14 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
         }
     };
 
+    const handleClose = () => {
+        form.reset();
+        setSelectedType('INCOME');
+        onClose();
+    };
 
     return (
-        <Dialog open={open} onOpenChange={onClose}>
+        <Dialog open={open} onOpenChange={handleClose}>
             <DialogContent className="sm:max-w-[500px] bg-white dark:bg-gray-800">
                 <DialogHeader>
                     <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -119,11 +113,12 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">Description</Label>
                         <Input
+                            placeholder="Enter transaction description"
                             className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500"
                             {...form.register('description')}
                         />
                         {form.formState.errors.description && (
-                            <p className="text-sm text-red-500">
+                            <p className="text-sm text-red-500 mt-1">
                                 {form.formState.errors.description.message}
                             </p>
                         )}
@@ -138,7 +133,7 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
                                     form.setValue('type', value);
                                     form.setValue('category', '');
                                 }}
-                                defaultValue={selectedType}
+                                value={selectedType}
                             >
                                 <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
                                     <SelectValue placeholder="Select type" />
@@ -152,7 +147,7 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
                                 </SelectContent>
                             </Select>
                             {form.formState.errors.type && (
-                                <p className="text-sm text-red-500">
+                                <p className="text-sm text-red-500 mt-1">
                                     {form.formState.errors.type.message}
                                 </p>
                             )}
@@ -162,7 +157,7 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
                             <Label className="text-gray-700 dark:text-gray-300">Category</Label>
                             <Select
                                 onValueChange={(value) => form.setValue('category', value)}
-                                defaultValue={form.getValues('category')}
+                                value={form.watch('category')}
                             >
                                 <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
                                     <SelectValue placeholder="Select category" />
@@ -176,7 +171,7 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
                                 </SelectContent>
                             </Select>
                             {form.formState.errors.category && (
-                                <p className="text-sm text-red-500">
+                                <p className="text-sm text-red-500 mt-1">
                                     {form.formState.errors.category.message}
                                 </p>
                             )}
@@ -189,31 +184,42 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
                             <Input
                                 type="number"
                                 step="0.01"
+                                placeholder="0.00"
                                 className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500"
                                 {...form.register('amount', { valueAsNumber: true })}
                             />
                             {form.formState.errors.amount && (
-                                <p className="text-sm text-red-500">
+                                <p className="text-sm text-red-500 mt-1">
                                     {form.formState.errors.amount.message}
                                 </p>
                             )}
                         </div>
 
-
                         <div>
-                            <Label className="text-gray-700 dark:text-gray-300">Transaction Bank</Label>
-                            <Select onValueChange={(bank) => form.setValue('fromBalanceId', bank)}>
-                                <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500 w-full px-3 py-2 rounded-md">
-                                    <SelectValue placeholder="Select a Bank" />
+                            <Label className="text-gray-700 dark:text-gray-300">Account</Label>
+                            <Select onValueChange={(value) => form.setValue('fromBalanceId', value)}>
+                                <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500 w-full">
+                                    <SelectValue placeholder="Select account" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-white dark:bg-gray-900">
-                                    <SelectGroup >
-                                        <SelectLabel>Transaction Bank</SelectLabel>
-                                        {balances.map((balance) => (
-                                            <SelectItem key={balance.id} value={balance.id}>
-                                                {balance.accountName} - {formatCurrency(parseFloat(balance.currentBalance))}
-                                            </SelectItem>
-                                        ))}
+                                    <SelectGroup>
+                                        <SelectLabel>Available Accounts</SelectLabel>
+                                        {balances.length === 0 ? (
+                                            <div className="px-2 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                                No accounts available
+                                            </div>
+                                        ) : (
+                                            balances.map((balance) => (
+                                                <SelectItem key={balance.id} value={balance.id}>
+                                                    <div className="flex items-center justify-between w-full">
+                                                        <span>{balance.accountName}</span>
+                                                        <span className="ml-2 text-gray-500 text-xs">
+                                                            {formatCurrency(parseFloat(balance.balance || '0'))}
+                                                        </span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))
+                                        )}
                                     </SelectGroup>
                                 </SelectContent>
                             </Select>
@@ -223,82 +229,57 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
                                 </p>
                             )}
                         </div>
-
-                        {/* <div>
-                            <Label className="text-gray-700 dark:text-gray-300">Transaction Date</Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                            "w-full min-w-[120px] justify-start text-left font-normal bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500",
-                                            !date && "text-muted-foreground"
-                                        )}
-                                    >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {date ? format(date, "PPP") : <span>Pick a date</span>}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500">
-                                    <Calendar
-                                        mode="single"
-                                        selected={date}
-                                        onSelect={(date) => {
-                                            setDate(date);
-                                            if (date) {
-                                                form.setValue('date', date);
-                                            }
-                                        }}
-                                        initialFocus
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                            {form.formState.errors.date && (
-                                <p className="text-sm text-red-500">
-                                    {form.formState.errors.date.message}
-                                </p>
-                            )}
-                        </div> */}
                     </div>
-                    {/* 
-                    <div>
-                        <Label className="text-gray-700 dark:text-gray-300">Transaction Bank</Label>
-                        <Select onValueChange={(bank) => form.setValue('fromBalanceId', bank)}>
-                            <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500 w-full px-3 py-2 rounded-md">
-                                <SelectValue placeholder="Select a Bank" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white dark:bg-gray-900">
-                                <SelectGroup >
-                                    <SelectLabel>Transaction Bank</SelectLabel>
-                                    {balances.map((balance) => (
-                                        <SelectItem key={balance.id} value={balance.id}>
-                                            {balance.accountName} - {formatCurrency(parseFloat(balance.currentBalance))}
-                                        </SelectItem>
-                                    ))}
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                        {form.formState.errors.fromBalanceId && (
-                            <p className="text-sm text-red-500 mt-1">
-                                {form.formState.errors.fromBalanceId.message}
-                            </p>
-                        )}
-                    </div> */}
+
+                    {/* Transaction Summary */}
+                    {form.watch('amount') > 0 && (
+                        <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                                Transaction Summary
+                            </h4>
+                            <div className="space-y-1 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500 dark:text-gray-400">Type</span>
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                                        {selectedType.replace('_', ' ')}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500 dark:text-gray-400">Category</span>
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                                        {form.watch('category') || 'Not selected'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                                    <span className="text-gray-700 dark:text-gray-300 font-medium">Amount</span>
+                                    <span className={`font-semibold ${selectedType === 'INCOME' || selectedType === 'LOAN_PAYMENT'
+                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                        : 'text-red-600 dark:text-red-400'
+                                        }`}>
+                                        {selectedType === 'INCOME' || selectedType === 'LOAN_PAYMENT' ? '+' : '-'}
+                                        {formatCurrency(form.watch('amount'))}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <DialogFooter className="gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={onClose}
+                            onClick={handleClose}
+                            disabled={form.formState.isSubmitting}
                             className="bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
                         >
                             Cancel
                         </Button>
                         <Button
                             type="submit"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            disabled={form.formState.isSubmitting}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
                         >
-                            Create Transaction
+                            {form.formState.isSubmitting ? 'Creating...' : 'Create Transaction'}
                         </Button>
                     </DialogFooter>
                 </form>

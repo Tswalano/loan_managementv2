@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1761680356074,
-      "tag": "0000_sad_archangel",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1761688378811,
-      "tag": "0001_purple_black_bolt",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1761689254490,
-      "tag": "0002_lovely_masque",
+      "when": 1763987891512,
+      "tag": "0000_slow_peter_parker",
       "breakpoints": true
     }
   ]
