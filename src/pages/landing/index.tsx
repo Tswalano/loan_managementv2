@@ -27,8 +27,8 @@ const LandingPage: React.FC = () => {
     return (
         <div className="min-h-screen bg-white dark:bg-gray-950">
             <nav className="sticky top-0 z-40">
-                <div className="mx-auto max-w-7xl px-4">
-                    <div className="mt-6 mb-4 rounded-2xl border border-gray-200/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur supports-[backdrop-filter]:bg-white/40 px-5 py-3 shadow-sm">
+                <div className="mx-auto max-w-7xl">
+                    <div className="rounded-2xl border border-gray-200/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur supports-[backdrop-filter]:bg-white/40 px-5 py-3 shadow-sm">
                         <div className="flex items-center justify-between">
                             {/* Left: Brand */}
                             <Link to="/" className="flex items-center font-extrabold text-xl text-gray-900 dark:text-white">

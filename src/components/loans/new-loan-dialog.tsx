@@ -16,13 +16,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { formatCurrency } from "@/lib/utils/formatters";
-import { Balance, NewTransaction, TransactionType } from "@/types";
-import { generateTransactionData } from "@/lib/utils/helper";
+import { Balance, CreateLoanRequest } from "@/types";
+// import { generateTransactionData } from "@/lib/utils/helper";
 
 const loanSchema = z.object({
-    description: z.string().min(2, "Borrower name is required"),
+    borrowerName: z.string().min(2, "Borrower name is required"),
     fromBalanceId: z.string().min(1, "Bank selection is required"),
-    amount: z.number().positive('Amount must be positive'),
+    principalAmount: z.number().positive('Amount must be positive'),
     interestRate: z.number().positive('Interest rate must be positive'),
 });
 
@@ -32,15 +32,17 @@ interface NewLoanDialogProps {
     open: boolean;
     balances: Balance[]
     onClose: () => void;
-    onSubmit: (data: NewTransaction) => Promise<void>;
+    onSubmit: (data: CreateLoanRequest) => Promise<void>;
 }
 
 export function NewLoanDialog({ open, onClose, onSubmit, balances }: NewLoanDialogProps) {
+
+
     const form = useForm<LoanFormData>({
         resolver: zodResolver(loanSchema),
         defaultValues: {
-            description: '',
-            amount: 0,
+            borrowerName: '',
+            principalAmount: 0,
             interestRate: 30,
             fromBalanceId: '',
         }
@@ -50,22 +52,26 @@ export function NewLoanDialog({ open, onClose, onSubmit, balances }: NewLoanDial
         try {
             console.log("Creating loan transaction:", data);
 
-            // Example: use the appropriate type based on context
-            const transactionType: TransactionType = 'LOAN_DISBURSEMENT';
-            // or 'LOAN_PAYMENT' depending on the form
-
             // Generate the clean transaction object for API
-            const loanData: NewTransaction = generateTransactionData(
-                {
-                    ...data,
-                    fromBalanceId: data.fromBalanceId ?? '',
-                    toBalanceId: data.fromBalanceId ?? data.fromBalanceId, // optional, safe fallback
-                    date: new Date(), // replace with real date
-                },
-                transactionType,
-                'user123', // replace with real userId from session
-                // data. // optional, only for LOAN_PAYMENT
-            );
+            // const loanData = generateTransactionData(
+            //     {
+            //         ...data,
+            //         fromBalanceId: data.fromBalanceId ?? '',
+            //         toBalanceId: data.fromBalanceId ?? data.fromBalanceId, // optional, safe fallback
+            //         date: new Date(), // replace with real date
+            //     },
+            //     TransactionType.LOAN_DISBURSEMENT,
+            //     'user123'
+            // );
+
+            const loanData: CreateLoanRequest = {
+                // userId: 'user123',
+                balanceId: data.fromBalanceId,
+                borrowerName: data.borrowerName,
+                principalAmount: data.principalAmount,
+                interestRate: data.interestRate,
+                termMonths: 12,
+            };
 
             // Send it to your API
             await onSubmit(loanData);
@@ -94,13 +100,13 @@ export function NewLoanDialog({ open, onClose, onSubmit, balances }: NewLoanDial
                         <div>
                             <Label className="text-gray-700 dark:text-gray-300">Borrower Name</Label>
                             <Input
-                                {...form.register('description')}
+                                {...form.register('borrowerName')}
                                 placeholder="Enter borrower name"
                                 className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500"
                             />
-                            {form.formState.errors.description && (
+                            {form.formState.errors.borrowerName && (
                                 <p className="text-sm text-red-500 mt-1">
-                                    {form.formState.errors.description.message}
+                                    {form.formState.errors.borrowerName.message}
                                 </p>
                             )}
                         </div>
@@ -112,12 +118,12 @@ export function NewLoanDialog({ open, onClose, onSubmit, balances }: NewLoanDial
                                     type="number"
                                     step="0.01"
                                     placeholder="0.00"
-                                    {...form.register('amount', { valueAsNumber: true })}
+                                    {...form.register('principalAmount', { valueAsNumber: true })}
                                     className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500"
                                 />
-                                {form.formState.errors.amount && (
+                                {form.formState.errors.principalAmount && (
                                     <p className="text-sm text-red-500 mt-1">
-                                        {form.formState.errors.amount.message}
+                                        {form.formState.errors.principalAmount.message}
                                     </p>
                                 )}
                             </div>
@@ -174,7 +180,7 @@ export function NewLoanDialog({ open, onClose, onSubmit, balances }: NewLoanDial
                         </div>
 
                         {/* Loan Summary */}
-                        {form.watch('amount') > 0 && form.watch('interestRate') > 0 && (
+                        {form.watch('principalAmount') > 0 && form.watch('interestRate') > 0 && (
                             <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
                                 <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
                                     Loan Summary
@@ -183,7 +189,7 @@ export function NewLoanDialog({ open, onClose, onSubmit, balances }: NewLoanDial
                                     <div className="flex justify-between">
                                         <span className="text-gray-500 dark:text-gray-400">Principal Amount</span>
                                         <span className="font-medium text-gray-900 dark:text-gray-100">
-                                            {formatCurrency(form.watch('amount'))}
+                                            {formatCurrency(form.watch('principalAmount'))}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
@@ -196,7 +202,7 @@ export function NewLoanDialog({ open, onClose, onSubmit, balances }: NewLoanDial
                                         <span className="text-gray-500 dark:text-gray-400">Total Interest</span>
                                         <span className="font-medium text-emerald-600 dark:text-emerald-400">
                                             {formatCurrency(
-                                                (form.watch('amount') * (form.watch('interestRate') / 100))
+                                                (form.watch('principalAmount') * (form.watch('interestRate') / 100))
                                             )}
                                         </span>
                                     </div>
@@ -205,8 +211,8 @@ export function NewLoanDialog({ open, onClose, onSubmit, balances }: NewLoanDial
                                             <span className="text-gray-700 dark:text-gray-300 font-medium">Total Repayment</span>
                                             <span className="font-semibold text-gray-900 dark:text-gray-100">
                                                 {formatCurrency(
-                                                    form.watch('amount') +
-                                                    (form.watch('amount') * (form.watch('interestRate') / 100))
+                                                    form.watch('principalAmount') +
+                                                    (form.watch('principalAmount') * (form.watch('interestRate') / 100))
                                                 )}
                                             </span>
                                         </div>

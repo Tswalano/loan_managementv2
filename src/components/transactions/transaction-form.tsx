@@ -23,9 +23,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Balance, NewTransaction } from '@/types';
-import { formatCurrency, generateReferenceNumber } from '@/lib/utils/formatters';
-import { generateTransactionData } from '@/lib/utils/helper';
+import { Balance, CreateTransactionRequest, TransactionType } from '@/types';
+import { formatCurrency } from '@/lib/utils/formatters';
 
 const TransactionCategories = {
     INCOME: ['Salary', 'Interest Income', 'Late Fees', 'Penalties', 'Other Income'],
@@ -35,7 +34,7 @@ const TransactionCategories = {
 } as const;
 
 const transactionFormSchema = z.object({
-    type: z.enum(['INCOME', 'EXPENSE', 'LOAN_PAYMENT', 'LOAN_DISBURSEMENT']),
+    type: z.nativeEnum(TransactionType),
     category: z.string().min(1, "Category is required"),
     fromBalanceId: z.string().min(1, "Transaction account is required"),
     amount: z.number().positive("Amount must be greater than 0"),
@@ -50,7 +49,7 @@ interface TransactionFormProps {
     open: boolean;
     balances: Balance[]
     onClose: () => void;
-    onSubmit: (data: NewTransaction) => Promise<void>;
+    onSubmit: (data: CreateTransactionRequest) => Promise<void>;
 }
 
 export default function TransactionForm({ open, balances, onClose, onSubmit }: TransactionFormProps) {
@@ -59,7 +58,7 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
     const form = useForm<TransactionFormData>({
         resolver: zodResolver(transactionFormSchema),
         defaultValues: {
-            type: 'INCOME',
+            type: TransactionType.INCOME,
             category: '',
             fromBalanceId: '',
             amount: 0,
@@ -72,15 +71,24 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
     const handleSubmit: SubmitHandler<TransactionFormData> = async (data) => {
         try {
 
-            const transactionData: NewTransaction = generateTransactionData(
-                {
-                    ...data,
-                    fromBalanceId: data.fromBalanceId ?? '',
-                    date: new Date(),
-                },
-                data.type,
-                "user123"
-            );
+            // const transactionData: CreateTransactionRequest = generateTransactionData(
+            //     {
+            //         ...data,
+            //         fromBalanceId: data.fromBalanceId ?? '',
+            //         date: new Date(),
+            //     },
+            //     data.type,
+            //     "user123"
+            // );
+
+            const transactionData: CreateTransactionRequest = {
+                type: data.type,
+                category: data.category,
+                fromBalanceId: data.fromBalanceId,
+                amount: data.amount,
+                description: data.description,
+                date: new Date().toISOString()
+            }
 
             await onSubmit(transactionData);
 
@@ -130,7 +138,7 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
                             <Select
                                 onValueChange={(value: keyof typeof TransactionCategories) => {
                                     setSelectedType(value);
-                                    form.setValue('type', value);
+                                    form.setValue('type', value as unknown as TransactionType);
                                     form.setValue('category', '');
                                 }}
                                 value={selectedType}

@@ -27,7 +27,7 @@ import { CustomTooltip } from '@/components/charts/custom-tooltip';
 import LoanTableRecords from '@/components/loans/loan-table';
 import { api } from '@/lib/api';
 import { useFinanceData } from '@/lib/api';
-import { LoanPayment, NewTransaction } from '@/types';
+import { CreateLoanRequest, LoanPaymentRequest } from '@/types';
 import { calculateLoanMetrics } from '@/components/dashboard/utils';
 import ErrorComponent from '@/components/error/error-component';
 
@@ -47,33 +47,24 @@ export default function LoanSummaryPage() {
     const metrics = useMemo(() => calculateLoanMetrics(loans), [loans]);
 
     const statusDistribution = [
-        { name: 'Active', value: loans.filter(loan => loan.status === 'ACTIVE').length },
-        { name: 'Paid', value: loans.filter(loan => loan.status === 'PAID').length },
-        { name: 'Defaulted', value: loans.filter(loan => loan.status === 'DEFAULTED').length },
+        { name: 'Active', value: loans.filter((loan: { status: string; }) => loan.status === 'ACTIVE').length },
+        { name: 'Paid', value: loans.filter((loan: { status: string; }) => loan.status === 'PAID').length },
+        { name: 'Defaulted', value: loans.filter((loan: { status: string; }) => loan.status === 'DEFAULTED').length },
     ];
 
     const loansBySize = [
-        { range: '< 999', count: loans.filter(loan => parseFloat(loan.principalAmount) <= 999).length },
-        { range: '1k - 1.9k', count: loans.filter(loan => parseFloat(loan.principalAmount) >= 1000 && parseFloat(loan.principalAmount) <= 1999).length },
-        { range: '2k - 3.9k', count: loans.filter(loan => parseFloat(loan.principalAmount) >= 2000 && parseFloat(loan.principalAmount) <= 3999).length },
-        { range: '4k+', count: loans.filter(loan => parseFloat(loan.principalAmount) >= 4000).length },
+        { range: '< 999', count: loans.filter((loan: { principalAmount: string; }) => parseFloat(loan.principalAmount) <= 999).length },
+        { range: '1k - 1.9k', count: loans.filter((loan: { principalAmount: string; }) => parseFloat(loan.principalAmount) >= 1000 && parseFloat(loan.principalAmount) <= 1999).length },
+        { range: '2k - 3.9k', count: loans.filter((loan: { principalAmount: string; }) => parseFloat(loan.principalAmount) >= 2000 && parseFloat(loan.principalAmount) <= 3999).length },
+        { range: '4k+', count: loans.filter((loan: { principalAmount: string; }) => parseFloat(loan.principalAmount) >= 4000).length },
     ];
 
-    const handleCreateLoan = async (lData: NewTransaction) => {
+    const handleCreateLoan = async (lData: CreateLoanRequest) => {
         try {
             console.log("Creating loan transaction:", lData);
 
-            if (!lData.fromBalanceId) {
-                throw new Error('No balance selected');
-            }
-
             // Use recordExpense for loan creation
-            await api.recordExpense({
-                amount: lData.amount,
-                category: lData.category,
-                description: lData.description,
-                fromBalanceId: lData.fromBalanceId,
-            });
+            await api.createLoan(lData);
 
             console.log("Loan expense created successfully");
             setIsNewLoanOpen(false);
@@ -84,26 +75,24 @@ export default function LoanSummaryPage() {
         }
     };
 
-    async function handleLoanPayment(payment: LoanPayment) {
+    async function handleLoanPayment(payment: LoanPaymentRequest) {
         try {
             console.log("Processing loan payment:", payment);
 
-            if (!payment.accountId) {
-                throw new Error('No account selected');
-            }
+            // if (!payment.accountId) {
+            //     throw new Error('No account selected');
+            // }
 
             const result = await api.recordLoanPayment(payment.loanId, {
                 amount: payment.amount,
-                toBalanceId: payment.accountId,
+                toBalanceId: payment.toBalanceId,
                 description: payment.description,
             });
 
             console.log("Loan payment result:", result);
 
-            return {
-                success: true,
-                transaction: result.transaction
-            };
+            return result;
+
         } catch (error) {
             console.error('Error processing payment:', error);
             return {

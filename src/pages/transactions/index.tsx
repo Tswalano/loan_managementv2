@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, SetStateAction } from 'react';
 import {
     Card,
     CardContent,
@@ -24,14 +25,21 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Plus, Search, Download, Calendar, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { formatCurrency, formatShortDate, generateReferenceNumber, truncateText } from '@/lib/utils/formatters';
-import type { Transaction, TransactionType } from '@/types';
+import { formatCurrency, formatShortDate, truncateText } from '@/lib/utils/formatters';
+import { CreateTransactionRequest, Transaction, TransactionType } from '@/types';
 import ViewTransactionDialog from '@/components/transactions/transaction-dialog';
 import TransactionForm from '@/components/transactions/transaction-form';
 import { useToast } from "@/hooks/use-toast";
+import { api, useFinanceData } from '@/lib/api';
 
 export default function TransactionsPage() {
     const { toast } = useToast();
+    const {
+        isLoading,
+        transactions,
+        balances,
+    } = useFinanceData();
+
     const [isNewTransactionOpen, setIsNewTransactionOpen] = useState(false);
     const [selectedType, setSelectedType] = useState<TransactionType | 'ALL'>('ALL');
     const [searchTerm, setSearchTerm] = useState<string>('');
@@ -42,41 +50,28 @@ export default function TransactionsPage() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const rowOptions = [10, 20, 50];
 
-    useEffect(() => {
-        if (error) {
-            toast({
-                title: "Error Loading Transactions",
-                description: (error as Error).message,
-                variant: "destructive",
-            });
-        }
-    }, [error, toast]);
-
-    const handleTransactionCreate = async (formData: NewTransaction) => {
+    const handleTransactionCreate = async (formData: CreateTransactionRequest) => {
         try {
-            if (formData.type === 'EXPENSE') {
-                const reference = generateReferenceNumber('EXPENSE');
-                await recordExpense({
+
+            if (formData.type === 'EXPENSE' || formData.type === 'INCOME') {
+                // const reference = generateReferenceNumber('EXPENSE');
+                await api.recordExpense({
                     date: formData.date,
                     amount: formData.amount.toString(),
-                    type: formData.type,
                     category: formData.category,
                     description: formData.description,
-                    toBalanceId: formData.fromBalanceId,
-                    fromBalanceId: formData.toBalanceId,
-                    reference
+                    fromBalanceId: formData.fromBalanceId!,
                 });
             } else {
-                const reference = generateReferenceNumber('INCOME');
-                await recordTransaction.mutateAsync({
+                // For other transaction types, use createTransaction
+                await api.createTransaction({
                     date: formData.date,
                     amount: formData.amount.toString(),
                     type: formData.type,
                     category: formData.category,
                     description: formData.description,
-                    toBalanceId: formData.fromBalanceId,
-                    fromBalanceId: formData.toBalanceId,
-                    reference
+                    fromBalanceId: formData.fromBalanceId,
+                    toBalanceId: formData.toBalanceId,
                 });
             }
 
@@ -86,11 +81,11 @@ export default function TransactionsPage() {
                 variant: "default",
             });
             setIsNewTransactionOpen(false);
-        } catch (error) {
-            console.log("Error,", error);
+        } catch (error: any) {
+            console.log("Error:", error);
             toast({
                 title: "Error",
-                description: "Failed to create transaction. Please try again.",
+                description: error.message || "Failed to create transaction. Please try again.",
                 variant: "destructive",
             });
         }
@@ -106,7 +101,7 @@ export default function TransactionsPage() {
         return colors[type] ?? 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400';
     };
 
-    const filteredTransactions = transactions.filter(transaction => {
+    const filteredTransactions = transactions.filter((transaction: Transaction) => {
         const description = transaction.description || '';
         const category = transaction.category || '';
 
@@ -271,7 +266,7 @@ export default function TransactionsPage() {
                             />
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            {(['ALL', 'INCOME', 'EXPENSE', 'LOAN_PAYMENT', 'LOAN_DISBURSEMENT'] as const).map((type) => (
+                            {Object.values(TransactionType).map((type) => (
                                 <Button
                                     key={type}
                                     variant={selectedType === type ? "default" : "outline"}
@@ -321,7 +316,7 @@ export default function TransactionsPage() {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    currentTransactions.map((transaction) => (
+                                    currentTransactions.map((transaction: SetStateAction<Transaction | null>) => (
                                         <TableRow
                                             key={transaction.id}
                                             className="hover:bg-gray-50 dark:hover:bg-gray-800/50"

@@ -17,9 +17,9 @@ import {
     Cell
 } from 'recharts';
 import { formatCurrency } from '@/lib/utils/formatters';
-import { useTransactionMetrics } from '@/hooks/useTransactions';
 import { MetricCard } from './MetricCard';
 import { PiggyBank, TrendingUp, Users, Wallet, Loader2 } from 'lucide-react';
+import { useFinanceData } from '@/lib/api';
 
 const COLORS = {
     INCOME: '#10B981',      // Emerald
@@ -31,7 +31,8 @@ const COLORS = {
 };
 
 export const DashboardCharts: React.FC = () => {
-    const { metrics, isLoading, error, refetchMetrics } = useTransactionMetrics();
+    // const { metrics, isLoading, error, refetchMetrics } = useTransactionMetrics();
+    const { isLoading, transactions, balances, dashboard, loans } = useFinanceData();
 
     // Loading state
     if (isLoading) {
@@ -42,23 +43,23 @@ export const DashboardCharts: React.FC = () => {
         );
     }
 
-    // Error state
-    if (error) {
-        return (
-            <div className="flex flex-col items-center justify-center h-[400px] space-y-4">
-                <p className="text-red-600 dark:text-red-400">Error loading metrics: {error.message}</p>
-                <button
-                    onClick={() => refetchMetrics()}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-                >
-                    Retry
-                </button>
-            </div>
-        );
-    }
+    // // Error state
+    // if (error) {
+    //     return (
+    //         <div className="flex flex-col items-center justify-center h-[400px] space-y-4">
+    //             <p className="text-red-600 dark:text-red-400">Error loading metrics: {error.message}</p>
+    //             <button
+    //                 onClick={() => refetchMetrics()}
+    //                 className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+    //             >
+    //                 Retry
+    //             </button>
+    //         </div>
+    //     );
+    // }
 
     // No data state
-    if (!metrics) {
+    if (!dashboard) {
         return (
             <div className="flex items-center justify-center h-[400px]">
                 <p className="text-gray-500 dark:text-gray-400">No metrics data available</p>
@@ -66,7 +67,9 @@ export const DashboardCharts: React.FC = () => {
         );
     }
 
-    console.log('Transaction Metrics:', metrics);
+    console.log('Transaction Metrics:', dashboard);
+
+    const metrics = dashboard;
 
     // Calculate loan collection percentage
     const totalDisbursed = metrics.loanMetrics?.totalLoanAmount || 0;

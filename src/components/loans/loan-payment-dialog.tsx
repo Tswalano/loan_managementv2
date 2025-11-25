@@ -22,14 +22,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency, stripLoanDisbursement } from '@/lib/utils/formatters';
 import { Calculator } from 'lucide-react';
-import { LoanPayment, Loan, Balance } from '@/types';
+import { Loan, Balance, LoanPaymentRequest } from '@/types';
 
 export interface LoanPaymentDialogProps {
     loan: Loan;
     balances: Balance[];
     open: boolean;
     onClose: () => void;
-    onSubmit: (loanPayment: LoanPayment) => Promise<void>;
+    onSubmit: (loanPayment: LoanPaymentRequest) => Promise<void>;
     isLoading?: boolean;
 }
 
@@ -41,24 +41,24 @@ export function LoanPaymentDialog({
     onSubmit,
     isLoading
 }: LoanPaymentDialogProps) {
-    const [loanPayment, setLoanPayment] = useState<LoanPayment>({
+    const [loanPayment, setLoanPayment] = useState<LoanPaymentRequest>({
         amount: 0,
-        accountId: '',
+        toBalanceId: '',
         description: '',
         loanId: loan.id
     });
 
-    const remainingAmount = Number(loan.remainingBalance);
+    const remainingAmount = Number(loan.outstandingBalance);
 
     const handleFullPayment = () => {
 
-        if (!loan.accountId) return;
+        // if (!loan.accountId) return;
 
         setLoanPayment({
             amount: remainingAmount,
             loanId: loan.id,
-            accountId: loanPayment.accountId,
-            description: `${stripLoanDisbursement(loanPayment.description)} - Loan Payment of ${formatCurrency(remainingAmount)}`,
+            toBalanceId: loanPayment.toBalanceId,
+            description: `${stripLoanDisbursement(loanPayment.description ?? '')} - Loan Payment of ${formatCurrency(remainingAmount)}`,
         });
 
         console.log(loanPayment);
@@ -67,12 +67,12 @@ export function LoanPaymentDialog({
 
     const handleHalfPayment = () => {
 
-        if (!loan.accountId) return;
+        // if (!loan.accountId) return;
 
         setLoanPayment({
             amount: remainingAmount / 2,
             loanId: loan.id,
-            accountId: loanPayment.accountId,
+            toBalanceId: loanPayment.toBalanceId,
             description: `${loan.borrowerName} - Loan Dep. of ${formatCurrency(remainingAmount / 2)}`
         });
     };
@@ -97,7 +97,7 @@ export function LoanPaymentDialog({
                                 Original Amount
                             </span>
                             <span className="font-medium text-gray-900 dark:text-gray-100">
-                                {formatCurrency(Number(loan.remainingBalance))}
+                                {formatCurrency(Number(loan.outstandingBalance))}
                             </span>
                         </div>
                         <div className="flex justify-between">
@@ -143,7 +143,7 @@ export function LoanPaymentDialog({
                                     const value = e.target.value;
                                     setLoanPayment({
                                         ...loanPayment,
-                                        amount: value === '' ? null : parseFloat(value), // Allow null
+                                        amount: value === '' ? '' : parseFloat(value), // Allow empty string
                                     });
                                 }}
                                 max={remainingAmount}
@@ -160,7 +160,7 @@ export function LoanPaymentDialog({
                     {/* Transaction Bank */}
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">Transaction Bank</Label>
-                        <Select onValueChange={(value) => setLoanPayment({ ...loanPayment, accountId: value })}>
+                        <Select onValueChange={(value) => setLoanPayment({ ...loanPayment, toBalanceId: value })} value={loanPayment.toBalanceId || undefined}>
                             <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500 w-full px-3 py-2 rounded-md">
                                 <SelectValue placeholder="Select a Bank" />
                             </SelectTrigger>
@@ -169,7 +169,7 @@ export function LoanPaymentDialog({
                                     <SelectLabel>Transaction Bank</SelectLabel>
                                     {balances.map((balance) => (
                                         <SelectItem key={balance.id} value={balance.id}>
-                                            {balance.accountName} - {formatCurrency(parseFloat(balance.currentBalance))}
+                                            {balance.accountName} - {formatCurrency(parseFloat(balance.balance))}
                                         </SelectItem>
                                     ))}
                                 </SelectGroup>
@@ -178,7 +178,7 @@ export function LoanPaymentDialog({
                     </div>
 
                     {/* Payment Preview */}
-                    {loanPayment.amount && loanPayment.amount > 0 && (
+                    {Number(loanPayment.amount) > 0 && (
                         <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-4 space-y-2">
                             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                                 <Calculator className="h-4 w-4" />
@@ -189,7 +189,7 @@ export function LoanPaymentDialog({
                                     New Balance After Payment
                                 </span>
                                 <span className="font-medium text-gray-900 dark:text-gray-100">
-                                    {formatCurrency(Math.max(0, remainingAmount - loanPayment.amount))}
+                                    {formatCurrency(Math.max(0, remainingAmount - Number(loanPayment.amount)))}
                                 </span>
                             </div>
                         </div>
@@ -207,7 +207,7 @@ export function LoanPaymentDialog({
                     </Button>
                     <Button
                         onClick={() => onSubmit(loanPayment)}
-                        disabled={loanPayment.amount && loanPayment.amount <= 0 || loanPayment.amount && loanPayment.amount > remainingAmount || isLoading}
+                        disabled={(Number(loanPayment.amount) <= 0) || (Number(loanPayment.amount) > remainingAmount) || isLoading}
                         className="bg-emerald-600 hover:bg-emerald-700 text-white"
                     >
                         {isLoading ? 'Processing...' : 'Make Payment'}

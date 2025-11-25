@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { Balance, Loan, LoanPayment, LoanTransactionResult } from "@/types";
+import { Balance, Loan, LoanPaymentRequest, LoanResponse } from "@/types";
 import { formatCurrency, formatShortDate } from "@/lib/utils/formatters";
 import { LoanPaymentDialog } from "./loan-payment-dialog";
 
@@ -16,7 +16,7 @@ interface LoanTableProps {
     loans: Loan[];
     balances: Balance[];
     refreshLoans: () => void;
-    handleLoanPayment: (payment: LoanPayment) => Promise<LoanTransactionResult>;
+    handleLoanPayment: (payment: LoanPaymentRequest) => Promise<LoanResponse>;
     loading: boolean;
 }
 
@@ -38,25 +38,22 @@ function LoanTableRecords({
         setError(null);
     };
 
-    const handlePaymentSubmit = async (payment: LoanPayment) => {
+    const handlePaymentSubmit = async (payment: LoanPaymentRequest) => {
         if (!selectedLoan) return;
 
         try {
             setIsProcessing(true);
             setError(null);
 
-            const result = await handleLoanPayment({
-                loanId: payment.loanId,
-                amount: payment.amount,
-                description: payment.description,
-                accountId: payment.accountId
-            });
+            const result = await handleLoanPayment({ ...payment, loanId: selectedLoan.id });
+
+            console.log('Payment result:', result);
 
             if (result.success) {
                 setIsPaymentDialogOpen(false);
                 refreshLoans();
             } else {
-                setError(result.error || 'Payment failed');
+                setError('Payment failed');
             }
         } catch (error) {
             setError(error instanceof Error ? error.message : 'Payment failed');
@@ -128,7 +125,7 @@ function LoanTableRecords({
                                                 {loan.balance?.bankName || '-'}
                                             </div>
                                             <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                {loan.balance?.accountReference || '-'}
+                                                {loan.balance?.accountNumber || '-'}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 dark:text-gray-100">

@@ -155,6 +155,7 @@ export interface Loan {
     metadata: Record<string, any>;
     createdAt: string;
     updatedAt: string;
+    balance?: Balance;
 }
 
 export interface LoanAccess {
@@ -347,6 +348,7 @@ export interface DisburseLoandRequest {
 export interface LoanPaymentRequest {
     amount: string | number;
     toBalanceId: string;
+    loanId: string;
     description?: string;
 }
 

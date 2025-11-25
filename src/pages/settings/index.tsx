@@ -32,7 +32,7 @@ interface NotificationSettings {
 
 export default function SettingsAndProfilePage() {
     const { toast } = useToast();
-    const user = getCurrentUser();
+    const user = getCurrentUser(); // NEW: Get user from utils
     const [loading, setLoading] = useState(false);
     const [profileData, setProfileData] = useState<ProfileData>({
         fullName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
@@ -60,14 +60,14 @@ export default function SettingsAndProfilePage() {
             setLoading(true);
 
             // TODO: Implement profile update logic with your backend
-            // Example:
-            // await fetch(`${BACKEND_API_URL}/users/${user.id}`, {
-            //     method: 'PUT',
-            //     headers: getAuthHeaders(),
-            //     body: JSON.stringify(profileData)
+            // When you have a user update endpoint, use:
+            // await api.updateUser(user.id, {
+            //     firstName: profileData.fullName.split(' ')[0],
+            //     lastName: profileData.fullName.split(' ').slice(1).join(' '),
+            //     phoneNumber: profileData.phone,
             // });
 
-            // Simulate API call
+            // Simulate API call for now
             await new Promise(resolve => setTimeout(resolve, 1000));
 
             toast({

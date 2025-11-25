@@ -1,48 +1,37 @@
 // src/pages/dashboard/index.tsx
-import { useState } from 'react';
+// import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { TrendingUp, Calendar, Loader2 } from 'lucide-react';
 import EmptyMessageCard from '@/components/cards/empty-card';
 import LoanTableRecords from '@/components/loans/loan-table';
-import { useBalanceOperations } from '@/hooks/useBalanceOperations';
+import { api, useFinanceData } from '@/lib/api';
 import { DashboardCharts } from '@/components/dashboard/Charts';
-import { LoanPayment, LoanTransactionResult } from '@/types';
-import ErrorComponent from '@/components/error/error-component';
-import { useTransactionMetrics } from '@/hooks/useTransactions';
+// import ErrorComponent from '@/components/error/error-component';
+import { ApiResponse, LoanPaymentRequest, Transaction } from '@/types';
 
 export default function DashboardPage() {
     const {
         isLoading: balanceLoading,
-        error: balanceError,
         loans,
         balances,
-        refetchLoans,
-        recordTransaction
-    } = useBalanceOperations();
+    } = useFinanceData();
 
-    const { isLoading: metricsLoading } = useTransactionMetrics();
+    // const [isAlertOpen, setIsAlertOpen] = useState(false);
+    // const [error, setError] = useState<string | null>(null);
 
-    const [isAlertOpen, setIsAlertOpen] = useState(false);
+    const loading = balanceLoading
 
-    const loading = balanceLoading || metricsLoading;
-    const error = balanceError ? (balanceError as Error).message : null;
-
-    const handleLoanPayment = async (payment: LoanPayment): Promise<LoanTransactionResult> => {
+    const handleLoanPayment = async (payment: LoanPaymentRequest): Promise<ApiResponse<{ transaction: Transaction }>> => {
         try {
-            const result = await recordTransaction.mutateAsync({
-                amount: String(payment.amount),
-                type: 'LOAN_PAYMENT',
-                category: 'Loan Payment',
+            const result = await api.recordLoanPayment(payment.toBalanceId, {
+                amount: payment.amount.toString(),
+                toBalanceId: payment.toBalanceId,
                 description: payment.description,
-                reference: `LOAN-PAY-${Date.now()}`,
-                date: new Date(),
-                toBalanceId: payment.accountId
             });
 
-            return {
-                success: true,
-                transaction: result
-            };
+            console.log("Loan payment recorded:", result);
+
+            return result;
         } catch (error) {
             return {
                 success: false,
@@ -98,7 +87,9 @@ export default function DashboardPage() {
                 <LoanTableRecords
                     loans={loans}
                     loading={loading}
-                    refreshLoans={refetchLoans}
+                    refreshLoans={async () => {
+                        // Data will refresh automatically via React Query
+                    }}
                     handleLoanPayment={handleLoanPayment}
                     balances={balances}
                 />
@@ -110,14 +101,14 @@ export default function DashboardPage() {
                 />
             )}
 
-            {error && (
+            {/* {error && (
                 <ErrorComponent
                     isOpen={isAlertOpen}
                     onClose={() => setIsAlertOpen(false)}
                     title="Error occurred"
                     message={error}
                 />
-            )}
+            )} */}
         </div>
     );
 }
