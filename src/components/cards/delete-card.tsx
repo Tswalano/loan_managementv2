@@ -1,5 +1,6 @@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { BankCard } from "./bank-card";
 
 interface DeleteAccountDialogProps {
@@ -21,52 +22,46 @@ export function DeleteAccountDialog({
     balance,
     isDeleting
 }: DeleteAccountDialogProps) {
-
-    // bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700
     return (
         <AlertDialog open={open} onOpenChange={onOpenChange}>
-            <AlertDialogContent className="max-w-md bg-white dark:bg-gray-800">
+            <AlertDialogContent className={cn(
+                "max-w-md",
+                "backdrop-blur-xl bg-white/95 dark:bg-gray-900/95",
+                "border border-gray-200/50 dark:border-gray-700/50",
+                "shadow-2xl dark:shadow-black/40"
+            )}>
                 <AlertDialogHeader className="gap-4">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
-                        <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-500" />
+                    <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
+                        <AlertCircle className="h-8 w-8 text-white" />
                     </div>
-                    <AlertDialogTitle className="text-center text-lg font-semibold text-red-600 dark:text-red-500">
+                    <AlertDialogTitle className="text-center text-xl font-bold text-red-600 dark:text-red-500">
                         Delete Account
                     </AlertDialogTitle>
-                    <AlertDialogDescription className="text-center">
-                        Are you sure you want to delete this account? This action cannot be undone.
+                    <AlertDialogDescription className="text-center text-gray-600 dark:text-gray-400">
+                        Are you sure you want to delete this account? This action cannot be undone and all associated data will be permanently removed.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 
-                <div className="my-6 space-y-1 rounded-xl border p-4 dark:border-gray-800">
+                <div className="my-6 p-4 rounded-xl border border-red-200 dark:border-red-800/30 bg-red-50/50 dark:bg-red-900/10">
                     <BankCard
                         accountName={accountName}
-                        accountReference={"xxxx"}
+                        accountNumber="****"
                         bankName={bankName}
                         currentBalance={balance}
-                        onClick={function (): void {}}
+                        onClick={() => { }}
                     />
-                    {/* <AccountDetailRow
-                        icon={<CreditCard className="h-4 w-4" />}
-                        label="Account Name"
-                        value={accountName}
-                    />
-                    <AccountDetailRow
-                        icon={<Building2 className="h-4 w-4" />}
-                        label="Bank Name"
-                        value={bankName}
-                    />
-                    <AccountDetailRow
-                        icon={<DollarSign className="h-4 w-4" />}
-                        label="Current Balance"
-                        value={formatCurrency(parseFloat(balance))}
-                    /> */}
                 </div>
 
-                <AlertDialogFooter className="gap-2 sm:gap-0">
+                <AlertDialogFooter className="gap-3 sm:gap-3">
                     <AlertDialogCancel
                         disabled={isDeleting}
-                        className="transition-transform hover:scale-102 active:scale-98"
+                        className={cn(
+                            "flex-1 bg-gray-100 dark:bg-gray-800",
+                            "border-gray-300 dark:border-gray-600",
+                            "text-gray-900 dark:text-white",
+                            "hover:bg-gray-200 dark:hover:bg-gray-700",
+                            "transition-all duration-200"
+                        )}
                     >
                         Cancel
                     </AlertDialogCancel>
@@ -76,7 +71,13 @@ export function DeleteAccountDialog({
                             await onConfirm();
                         }}
                         disabled={isDeleting}
-                        className="bg-red-600 text-white transition-all hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 dark:hover:text-white"
+                        className={cn(
+                            "flex-1 bg-gradient-to-r from-red-600 to-red-700",
+                            "hover:from-red-700 hover:to-red-800",
+                            "text-white shadow-lg hover:shadow-xl",
+                            "transition-all duration-300",
+                            "disabled:opacity-50 disabled:cursor-not-allowed"
+                        )}
                     >
                         {isDeleting ? (
                             <div className="flex items-center gap-2">

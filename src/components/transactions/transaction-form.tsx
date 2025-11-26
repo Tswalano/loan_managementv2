@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/select"
 import { Balance, CreateTransactionRequest, TransactionType } from '@/types';
 import { formatCurrency } from '@/lib/utils/formatters';
+import { cn } from '@/lib/utils';
+import { DollarSign, Tag, FileText } from 'lucide-react';
 
 const TransactionCategories = {
     INCOME: ['Salary', 'Interest Income', 'Late Fees', 'Penalties', 'Other Income'],
@@ -70,17 +72,6 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
 
     const handleSubmit: SubmitHandler<TransactionFormData> = async (data) => {
         try {
-
-            // const transactionData: CreateTransactionRequest = generateTransactionData(
-            //     {
-            //         ...data,
-            //         fromBalanceId: data.fromBalanceId ?? '',
-            //         date: new Date(),
-            //     },
-            //     data.type,
-            //     "user123"
-            // );
-
             const transactionData: CreateTransactionRequest = {
                 type: data.type,
                 category: data.category,
@@ -91,7 +82,6 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
             }
 
             await onSubmit(transactionData);
-
             form.reset();
             onClose();
         } catch (error) {
@@ -105,36 +95,57 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
         onClose();
     };
 
+    const isIncome = selectedType === 'INCOME' || selectedType === 'LOAN_PAYMENT';
+
     return (
         <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="sm:max-w-[500px] bg-white dark:bg-gray-800">
+            <DialogContent className={cn(
+                "sm:max-w-[550px]",
+                "backdrop-blur-xl bg-white/95 dark:bg-gray-900/95",
+                "border border-gray-200/50 dark:border-gray-700/50",
+                "shadow-2xl dark:shadow-black/40"
+            )}>
                 <DialogHeader>
-                    <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                    <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                         Create New Transaction
                     </DialogTitle>
-                    <DialogDescription className="text-gray-500 dark:text-gray-400">
+                    <DialogDescription className="text-gray-600 dark:text-gray-400">
                         Add a new transaction to track your income, expenses, or loan payments
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                    <div>
-                        <Label className="text-gray-700 dark:text-gray-300">Description</Label>
-                        <Input
-                            placeholder="Enter transaction description"
-                            className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500"
-                            {...form.register('description')}
-                        />
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5">
+                    {/* Description */}
+                    <div className="space-y-2">
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Description
+                        </Label>
+                        <div className="relative">
+                            <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                            <Input
+                                placeholder="Enter transaction description"
+                                className={cn(
+                                    "pl-10 bg-white dark:bg-gray-800/50",
+                                    "border-gray-300 dark:border-gray-600",
+                                    "focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546]"
+                                )}
+                                {...form.register('description')}
+                            />
+                        </div>
                         {form.formState.errors.description && (
-                            <p className="text-sm text-red-500 mt-1">
+                            <p className="text-sm text-red-500 dark:text-red-400 flex items-center gap-1">
+                                <span className="text-xs">⚠</span>
                                 {form.formState.errors.description.message}
                             </p>
                         )}
                     </div>
 
+                    {/* Type and Category */}
                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <Label className="text-gray-700 dark:text-gray-300">Type</Label>
+                        <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Type
+                            </Label>
                             <Select
                                 onValueChange={(value: keyof typeof TransactionCategories) => {
                                     setSelectedType(value);
@@ -143,85 +154,98 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
                                 }}
                                 value={selectedType}
                             >
-                                <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                                <SelectTrigger className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600">
                                     <SelectValue placeholder="Select type" />
                                 </SelectTrigger>
-                                <SelectContent>
-                                    {Object.keys(TransactionCategories).map((type) => (
-                                        <SelectItem key={type} value={type}>
-                                            {type.replace('_', ' ')}
+                                <SelectContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                                    {(Object.keys(TransactionCategories) as (keyof typeof TransactionCategories)[]).map((typeKey) => (
+                                        <SelectItem key={typeKey} value={typeKey} className="focus:bg-gray-100 dark:focus:bg-gray-800">
+                                            {typeKey.replace('_', ' ')}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
-                            {form.formState.errors.type && (
-                                <p className="text-sm text-red-500 mt-1">
-                                    {form.formState.errors.type.message}
-                                </p>
-                            )}
                         </div>
 
-                        <div>
-                            <Label className="text-gray-700 dark:text-gray-300">Category</Label>
+                        <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Category
+                            </Label>
                             <Select
                                 onValueChange={(value) => form.setValue('category', value)}
                                 value={form.watch('category')}
                             >
-                                <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                                <SelectTrigger className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600">
                                     <SelectValue placeholder="Select category" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
                                     {TransactionCategories[selectedType].map((category) => (
-                                        <SelectItem key={category} value={category}>
+                                        <SelectItem key={category} value={category} className="focus:bg-gray-100 dark:focus:bg-gray-800">
                                             {category}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
-                            {form.formState.errors.category && (
-                                <p className="text-sm text-red-500 mt-1">
-                                    {form.formState.errors.category.message}
-                                </p>
-                            )}
                         </div>
                     </div>
 
+                    {/* Amount and Account */}
                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <Label className="text-gray-700 dark:text-gray-300">Amount</Label>
-                            <Input
-                                type="number"
-                                step="0.01"
-                                placeholder="0.00"
-                                className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500"
-                                {...form.register('amount', { valueAsNumber: true })}
-                            />
+                        <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Amount
+                            </Label>
+                            <div className="relative">
+                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                <Input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    className={cn(
+                                        "pl-10 bg-white dark:bg-gray-800/50",
+                                        "border-gray-300 dark:border-gray-600",
+                                        "focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546]"
+                                    )}
+                                    {...form.register('amount', { valueAsNumber: true })}
+                                />
+                            </div>
                             {form.formState.errors.amount && (
-                                <p className="text-sm text-red-500 mt-1">
+                                <p className="text-sm text-red-500 dark:text-red-400">
                                     {form.formState.errors.amount.message}
                                 </p>
                             )}
                         </div>
 
-                        <div>
-                            <Label className="text-gray-700 dark:text-gray-300">Account</Label>
+                        <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Account
+                            </Label>
                             <Select onValueChange={(value) => form.setValue('fromBalanceId', value)}>
-                                <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus-visible:ring-emerald-500 w-full">
+                                <SelectTrigger className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600">
                                     <SelectValue placeholder="Select account" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-white dark:bg-gray-900">
+                                <SelectContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
                                     <SelectGroup>
-                                        <SelectLabel>Available Accounts</SelectLabel>
+                                        <SelectLabel className="text-gray-500 dark:text-gray-400">Available Accounts</SelectLabel>
                                         {balances.length === 0 ? (
-                                            <div className="px-2 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                            <div className="px-2 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                                                 No accounts available
                                             </div>
                                         ) : (
                                             balances.map((balance) => (
-                                                <SelectItem key={balance.id} value={balance.id}>
-                                                    <div className="flex items-center justify-between w-full">
-                                                        <span>{balance.accountName}</span>
-                                                        <span className="ml-2 text-gray-500 text-xs">
+                                                <SelectItem
+                                                    key={balance.id}
+                                                    value={balance.id}
+                                                    className="focus:bg-gray-100 dark:focus:bg-gray-800"
+                                                >
+                                                    <div className="flex items-center justify-between w-full gap-4">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium">{balance.accountName}</span>
+                                                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                                {balance.bankName}
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                                                             {formatCurrency(parseFloat(balance.balance || '0'))}
                                                         </span>
                                                     </div>
@@ -232,7 +256,7 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
                                 </SelectContent>
                             </Select>
                             {form.formState.errors.fromBalanceId && (
-                                <p className="text-sm text-red-500 mt-1">
+                                <p className="text-sm text-red-500 dark:text-red-400">
                                     {form.formState.errors.fromBalanceId.message}
                                 </p>
                             )}
@@ -241,53 +265,85 @@ export default function TransactionForm({ open, balances, onClose, onSubmit }: T
 
                     {/* Transaction Summary */}
                     {form.watch('amount') > 0 && (
-                        <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-                                Transaction Summary
-                            </h4>
-                            <div className="space-y-1 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-gray-500 dark:text-gray-400">Type</span>
-                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                        <div className={cn(
+                            "p-5 rounded-xl border",
+                            isIncome
+                                ? "bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-800/10 border-emerald-200 dark:border-emerald-800/30"
+                                : "bg-gradient-to-br from-red-50 to-red-100/50 dark:from-red-900/20 dark:to-red-800/10 border-red-200 dark:border-red-800/30"
+                        )}>
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className={cn(
+                                    "w-8 h-8 rounded-lg flex items-center justify-center",
+                                    isIncome ? "bg-emerald-500 dark:bg-emerald-600" : "bg-red-500 dark:bg-red-600"
+                                )}>
+                                    <Tag className="h-4 w-4 text-white" />
+                                </div>
+                                <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                                    Transaction Summary
+                                </h4>
+                            </div>
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-600 dark:text-gray-400">Type</span>
+                                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
                                         {selectedType.replace('_', ' ')}
                                     </span>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-500 dark:text-gray-400">Category</span>
-                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-600 dark:text-gray-400">Category</span>
+                                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
                                         {form.watch('category') || 'Not selected'}
                                     </span>
                                 </div>
-                                <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
-                                    <span className="text-gray-700 dark:text-gray-300 font-medium">Amount</span>
-                                    <span className={`font-semibold ${selectedType === 'INCOME' || selectedType === 'LOAN_PAYMENT'
-                                        ? 'text-emerald-600 dark:text-emerald-400'
-                                        : 'text-red-600 dark:text-red-400'
-                                        }`}>
-                                        {selectedType === 'INCOME' || selectedType === 'LOAN_PAYMENT' ? '+' : '-'}
-                                        {formatCurrency(form.watch('amount'))}
+                                <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
+                                    <span className="text-sm font-semibold text-gray-900 dark:text-white">Amount</span>
+                                    <span className={cn(
+                                        "text-lg font-bold",
+                                        isIncome
+                                            ? 'text-emerald-600 dark:text-emerald-400'
+                                            : 'text-red-600 dark:text-red-400'
+                                    )}>
+                                        {isIncome ? '+' : '-'}{formatCurrency(form.watch('amount'))}
                                     </span>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    <DialogFooter className="gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <DialogFooter className="gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
                         <Button
                             type="button"
                             variant="outline"
                             onClick={handleClose}
                             disabled={form.formState.isSubmitting}
-                            className="bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                            className={cn(
+                                "bg-gray-100 dark:bg-gray-800",
+                                "border-gray-300 dark:border-gray-600",
+                                "text-gray-900 dark:text-white",
+                                "hover:bg-gray-200 dark:hover:bg-gray-700"
+                            )}
                         >
                             Cancel
                         </Button>
                         <Button
                             type="submit"
                             disabled={form.formState.isSubmitting}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
+                            className={cn(
+                                "bg-gradient-to-r from-emerald-600 to-emerald-700",
+                                "hover:from-emerald-700 hover:to-emerald-800",
+                                "text-white shadow-lg hover:shadow-xl",
+                                "transition-all duration-300",
+                                "disabled:opacity-50 disabled:cursor-not-allowed"
+                            )}
                         >
-                            {form.formState.isSubmitting ? 'Creating...' : 'Create Transaction'}
+                            {form.formState.isSubmitting ? (
+                                <span className="flex items-center gap-2">
+                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                    Creating...
+                                </span>
+                            ) : (
+                                'Create Transaction'
+                            )}
                         </Button>
                     </DialogFooter>
                 </form>

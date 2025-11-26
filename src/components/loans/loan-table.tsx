@@ -1,4 +1,3 @@
-// src/components/loans/LoanTableRecords.tsx
 import {
     Card,
     CardContent,
@@ -11,6 +10,9 @@ import { useState } from "react";
 import { Balance, Loan, LoanPaymentRequest, LoanResponse } from "@/types";
 import { formatCurrency, formatShortDate } from "@/lib/utils/formatters";
 import { LoanPaymentDialog } from "./loan-payment-dialog";
+import api from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { DollarSign, Send, AlertCircle } from "lucide-react";
 
 interface LoanTableProps {
     loans: Loan[];
@@ -38,6 +40,21 @@ function LoanTableRecords({
         setError(null);
     };
 
+    const handleDisburst = (loan: Loan) => {
+        api.disburseLoan(loan.id, {
+            amount: Number(loan.principalAmount),
+            fromBalanceId: loan.balanceId,
+            description: `Disbursing loan to ${loan.borrowerName}`,
+        })
+            .then(() => {
+                refreshLoans();
+            })
+            .catch((err) => {
+                console.error('Error disbursing loan:', err);
+                setError('Failed to disburse loan. Please try again.');
+            });
+    };
+
     const handlePaymentSubmit = async (payment: LoanPaymentRequest) => {
         if (!selectedLoan) return;
 
@@ -63,107 +80,168 @@ function LoanTableRecords({
         }
     };
 
-    // handling loading state
     if (loading) {
         return (
             <div className="flex items-center justify-center h-48">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
+                <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 dark:border-gray-700 border-t-emerald-600 dark:border-t-[#C4F546]" />
             </div>
         );
     }
 
     return (
         <>
-            <Card className="bg-white dark:bg-gray-800">
+            <Card className={cn(
+                "backdrop-blur-xl bg-white/80 dark:bg-gray-900/80",
+                "border border-gray-200/50 dark:border-gray-700/50",
+                "rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/20"
+            )}>
                 <CardHeader>
-                    <CardTitle>Recent Loans</CardTitle>
-                    <CardDescription>Latest loan disbursements and their status</CardDescription>
+                    <CardTitle className="text-gray-900 dark:text-white">Recent Loans</CardTitle>
+                    <CardDescription className="text-gray-600 dark:text-gray-400">
+                        Latest loan disbursements and their status
+                    </CardDescription>
                     {error && (
-                        <div className="text-sm text-red-600 dark:text-red-400 mt-2">
+                        <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800/30">
+                            <AlertCircle className="h-4 w-4" />
                             {error}
                         </div>
                     )}
                 </CardHeader>
                 <CardContent>
-                    <div className="rounded-lg border border-gray-200 dark:border-gray-700">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead>
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Borrower
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Account
-                                    </th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Amount
-                                    </th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Balance
-                                    </th>
-                                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Status
-                                    </th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Actions
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                {loans.map((loan) => (
-                                    <tr key={loan.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                {loan.borrowerName || 'Not available'}
-                                            </div>
-                                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                Started {loan.createdAt ? formatShortDate(new Date(loan.createdAt)) : 'Not available'}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                {loan.balance?.bankName || '-'}
-                                            </div>
-                                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                {loan.balance?.accountNumber || '-'}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 dark:text-gray-100">
-                                            {formatCurrency(parseFloat(loan.principalAmount || '0'))}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 dark:text-gray-100">
-                                            {formatCurrency(parseFloat(loan.outstandingBalance || '0'))}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${loan.status === 'ACTIVE'
-                                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400'
-                                                : loan.status === 'PAID'
-                                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
-                                                    : loan.status === 'DEFAULTED'
-                                                        ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-                                                }`}>
-                                                {loan.status || 'PENDING'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => handlePayment(loan)}
-                                                disabled={loan.status !== 'ACTIVE' || isProcessing}
-                                                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 
-                                                    text-emerald-600 dark:text-emerald-400 hover:bg-gray-100 dark:hover:bg-gray-700 
-                                                    hover:text-emerald-700 dark:hover:text-emerald-300 disabled:opacity-50 
-                                                    disabled:cursor-not-allowed transition-colors duration-200"
-                                            >
-                                                Make Payment
-                                            </Button>
-                                        </td>
+                    <div className="rounded-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead className="bg-gray-50 dark:bg-gray-800/50">
+                                    <tr>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                                            Borrower
+                                        </th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                                            Account
+                                        </th>
+                                        <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                                            Amount
+                                        </th>
+                                        <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                                            Balance
+                                        </th>
+                                        <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                                            Status
+                                        </th>
+                                        <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                                            Actions
+                                        </th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                    {loans.map((loan, index) => (
+                                        <tr
+                                            key={loan.id}
+                                            className={cn(
+                                                "transition-colors duration-200",
+                                                "hover:bg-gray-50 dark:hover:bg-gray-800/50",
+                                                index % 2 === 0 ? "bg-white dark:bg-gray-900/40" : "bg-gray-50/50 dark:bg-gray-900/20"
+                                            )}
+                                        >
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+                                                        <span className="text-white font-semibold text-sm">
+                                                            {loan.borrowerName?.charAt(0)?.toUpperCase() || 'N'}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                            {loan.borrowerName || 'Not available'}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                            Started {loan.createdAt ? formatShortDate(new Date(loan.createdAt)) : 'Not available'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    {loan.balance?.bankName || '-'}
+                                                </div>
+                                                <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                                                    {loan.balance?.accountNumber || '-'}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <div className="text-sm font-bold text-gray-900 dark:text-white">
+                                                    {formatCurrency(parseFloat(loan.principalAmount || '0'))}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <div className="text-sm font-bold text-orange-600 dark:text-orange-400">
+                                                    {formatCurrency(parseFloat(loan.outstandingBalance || '0'))}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                <span className={cn(
+                                                    "px-3 py-1.5 text-xs rounded-full font-semibold inline-flex items-center gap-1",
+                                                    loan.status === 'ACTIVE' && "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+                                                    loan.status === 'PAID' && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+                                                    loan.status === 'DEFAULTED' && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+                                                    loan.status === 'PENDING' && "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                                )}>
+                                                    <div className={cn(
+                                                        "w-1.5 h-1.5 rounded-full",
+                                                        loan.status === 'ACTIVE' && "bg-emerald-600 dark:bg-emerald-400",
+                                                        loan.status === 'PAID' && "bg-blue-600 dark:bg-blue-400",
+                                                        loan.status === 'DEFAULTED' && "bg-red-600 dark:bg-red-400",
+                                                        loan.status === 'PENDING' && "bg-yellow-600 dark:bg-yellow-400"
+                                                    )} />
+                                                    {loan.status || 'PENDING'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                {loan.status === 'ACTIVE' ? (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handlePayment(loan)}
+                                                        disabled={loan.status !== 'ACTIVE' || isProcessing}
+                                                        className={cn(
+                                                            "bg-emerald-50 dark:bg-emerald-900/20",
+                                                            "border-emerald-200 dark:border-emerald-800/30",
+                                                            "text-emerald-700 dark:text-emerald-400",
+                                                            "hover:bg-emerald-100 dark:hover:bg-emerald-900/40",
+                                                            "disabled:opacity-50 disabled:cursor-not-allowed",
+                                                            "transition-all duration-200"
+                                                        )}
+                                                    >
+                                                        <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+                                                        Make Payment
+                                                    </Button>
+                                                ) : loan.status === 'PENDING' ? (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleDisburst(loan)}
+                                                        className={cn(
+                                                            "bg-blue-50 dark:bg-blue-900/20",
+                                                            "border-blue-200 dark:border-blue-800/30",
+                                                            "text-blue-700 dark:text-blue-400",
+                                                            "hover:bg-blue-100 dark:hover:bg-blue-900/40",
+                                                            "transition-all duration-200"
+                                                        )}
+                                                    >
+                                                        <Send className="h-3.5 w-3.5 mr-1.5" />
+                                                        Disburse Loan
+                                                    </Button>
+                                                ) : (
+                                                    <span className="text-sm text-gray-400 dark:text-gray-500 font-medium">
+                                                        No Actions
+                                                    </span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </CardContent>
             </Card>

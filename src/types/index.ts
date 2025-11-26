@@ -106,10 +106,10 @@ export interface Balance {
     organizationId: string;
     userId: string;
     type: AccountType;
-    bankName: string | null;
+    bankName: string;
     accountStatus: AccountStatus;
-    accountNumber: string | null;
-    accountName: string | null;
+    accountNumber: string;
+    accountName: string;
     balance: string;
     previousBalance: string | null;
     currency: string;

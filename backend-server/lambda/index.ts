@@ -172,7 +172,7 @@ async function updateBalanceFromTransaction(
     balanceId: string,
     amount: number,
     isCredit: boolean,
-    trx?: typeof db
+    trx?: any
 ) {
     const dbClient = trx || db;
 
@@ -203,7 +203,7 @@ async function updateBalanceFromTransaction(
 async function updateLoanFromPayment(
     loanId: string,
     paymentAmount: number,
-    trx?: typeof db
+    trx?: any
 ) {
     const dbClient = trx || db;
 
