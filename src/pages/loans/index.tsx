@@ -154,8 +154,6 @@ export default function LoanSummaryPage() {
         );
     }
 
-    const maxLoanSize = Math.max(...loansBySize.map(l => l.count));
-
     return (
         <div className="p-8 space-y-8 min-h-screen">
             {/* Header Section */}
@@ -378,38 +376,46 @@ export default function LoanSummaryPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="h-[300px] flex items-end justify-around gap-4 p-4">
-                            {loansBySize.map((item, index) => {
-                                const heightPercent = maxLoanSize > 0 ? (item.count / maxLoanSize) * 100 : 0;
+                            {(() => {
+                                const maxCount = Math.max(...loansBySize.map(i => Number(i.count || 0)), 0) || 0;
                                 const colors = [
                                     'from-blue-500 to-blue-600',
                                     'from-emerald-500 to-emerald-600',
                                     'from-purple-500 to-purple-600',
-                                    'from-orange-500 to-orange-600'
+                                    'from-orange-500 to-orange-600',
                                 ];
+                                return loansBySize.map((item, index) => {
+                                    const count = Number(item.count || 0);
+                                    const heightPercent = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                                    const colorClass = colors[index % colors.length];
 
-                                return (
-                                    <div key={index} className="flex-1 flex flex-col items-center gap-3">
-                                        <div className="w-full relative group">
-                                            <div
-                                                className={cn(
-                                                    "w-full rounded-t-xl bg-gradient-to-t transition-all duration-500 shadow-lg group-hover:shadow-xl",
-                                                    colors[index]
-                                                )}
-                                                style={{ height: `${Math.max(heightPercent, 5)}%`, minHeight: '20px' }}
-                                            >
-                                                {item.count > 0 && (
+                                    return (
+                                        <div key={index} className="flex-1 flex flex-col items-center gap-3">
+                                            {/* give this wrapper a fixed height so percentage heights are meaningful */}
+                                            <div className="w-full relative group h-48"> {/* h-48 = 12rem; change as needed */}
+                                                <div
+                                                    className={cn(
+                                                        "absolute left-0 right-0 bottom-0 rounded-t-xl bg-gradient-to-t transition-all duration-500 shadow-lg group-hover:shadow-xl",
+                                                        colorClass
+                                                    )}
+                                                    style={{ height: `${Math.max(heightPercent, 5)}%` }} // keep a visible min (5%)
+                                                />
+                                                {/* count label positioned above the bar */}
+                                                {count > 0 && (
                                                     <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-sm font-bold text-gray-900 dark:text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        {item.count}
+                                                        {count}
                                                     </div>
                                                 )}
                                             </div>
+
+                                            <span className="text-xs font-medium text-gray-600 dark:text-gray-400 text-center">
+                                                {item.range}
+                                            </span>
                                         </div>
-                                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400 text-center">
-                                            {item.range}
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                });
+                            })()}
+
                         </div>
                     </CardContent>
                 </Card>

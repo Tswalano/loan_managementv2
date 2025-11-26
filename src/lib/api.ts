@@ -648,6 +648,178 @@ export function useAuditLogs(limit?: number) {
 }
 
 // ============================================
+// HELPER FUNCTIONS FOR METRICS
+// ============================================
+
+interface MonthlyData {
+    month: string;
+    income: number;
+    expense: number;
+    loanPayment: number;
+    loanDisbursement: number;
+}
+
+interface LoanTrendData {
+    month: string;
+    disbursements: number;
+    payments: number;
+    interest: number;
+    activeLoans: number;
+}
+
+interface TypeBreakdown {
+    type: string;
+    amount: number;
+}
+
+interface LoanMetrics {
+    totalLoanAmount: number;
+    totalInterest: number;
+    totalRemainingBalance: number;
+    activeLoansCount: number;
+}
+
+interface EnhancedDashboard {
+    totalBalance: string;
+    totalLoaned: string;
+    totalOutstanding: string;
+    activeLoansCount: number;
+    balanceAccounts: number;
+    recentTransactions: Transaction[];
+    bankBalance: number;
+    monthlyData: MonthlyData[];
+    loanTrends: LoanTrendData[];
+    typeBreakdown: TypeBreakdown[];
+    loanMetrics: LoanMetrics;
+}
+
+function computeMonthlyMetrics(
+    transactions: Transaction[],
+    loans: Loan[]
+): Omit<EnhancedDashboard, 'totalBalance' | 'totalLoaned' | 'totalOutstanding' | 'activeLoansCount' | 'balanceAccounts' | 'recentTransactions' | 'bankBalance'> {
+    // Group transactions by month
+    const monthlyMap = new Map<string, MonthlyData>();
+    const loanTrendsMap = new Map<string, LoanTrendData>();
+    const typeBreakdownMap = new Map<string, number>();
+
+    // Process transactions
+    transactions.forEach(transaction => {
+        const date = new Date(transaction.date);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const monthLabel = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+        // Initialize monthly data if not exists
+        if (!monthlyMap.has(monthKey)) {
+            monthlyMap.set(monthKey, {
+                month: monthLabel,
+                income: 0,
+                expense: 0,
+                loanPayment: 0,
+                loanDisbursement: 0,
+            });
+        }
+
+        // Initialize loan trends if not exists
+        if (!loanTrendsMap.has(monthKey)) {
+            loanTrendsMap.set(monthKey, {
+                month: monthLabel,
+                disbursements: 0,
+                payments: 0,
+                interest: 0,
+                activeLoans: 0,
+            });
+        }
+
+        const monthly = monthlyMap.get(monthKey)!;
+        const loanTrend = loanTrendsMap.get(monthKey)!;
+        const amount = parseFloat(transaction.amount);
+
+        // Update monthly data
+        switch (transaction.type) {
+            case 'INCOME':
+                monthly.income += amount;
+                break;
+            case 'EXPENSE':
+                monthly.expense += amount;
+                break;
+            case 'LOAN_PAYMENT':
+                monthly.loanPayment += amount;
+                loanTrend.payments += amount;
+                break;
+            case 'LOAN_DISBURSEMENT':
+                monthly.loanDisbursement += amount;
+                loanTrend.disbursements += amount;
+                break;
+        }
+
+        // Update type breakdown
+        typeBreakdownMap.set(
+            transaction.type,
+            (typeBreakdownMap.get(transaction.type) || 0) + amount
+        );
+    });
+
+    // Calculate active loans per month
+    loans.forEach(loan => {
+        const startDate = new Date(loan.createdAt);
+        const startKey = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+
+        loanTrendsMap.forEach((trend, monthKey) => {
+            if (monthKey >= startKey && loan.status === 'ACTIVE') {
+                trend.activeLoans += 1;
+            }
+        });
+    });
+
+    // Calculate loan interest (estimated)
+    loans.forEach(loan => {
+        const interest = parseFloat(loan.principalAmount) * (parseFloat(loan.interestRate) / 100);
+        const monthKey = new Date(loan.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+        loanTrendsMap.forEach((trend) => {
+            if (trend.month === monthKey) {
+                trend.interest += interest;
+            }
+        });
+    });
+
+    // Convert maps to sorted arrays
+    const monthlyData = Array.from(monthlyMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([, data]) => data)
+        .slice(-12); // Last 12 months
+
+    const loanTrends = Array.from(loanTrendsMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([, data]) => data)
+        .slice(-12); // Last 12 months
+
+    const typeBreakdown = Array.from(typeBreakdownMap.entries())
+        .map(([type, amount]) => ({ type, amount }))
+        .sort((a, b) => b.amount - a.amount);
+
+    // Calculate loan metrics
+    const loanMetrics: LoanMetrics = {
+        totalLoanAmount: loans.reduce((sum, loan) => sum + parseFloat(loan.principalAmount), 0),
+        totalInterest: loans.reduce((sum, loan) => {
+            const interest = parseFloat(loan.principalAmount) * (parseFloat(loan.interestRate) / 100);
+            return sum + interest;
+        }, 0),
+        totalRemainingBalance: loans
+            .filter(l => l.status === 'ACTIVE')
+            .reduce((sum, loan) => sum + parseFloat(loan.outstandingBalance || '0'), 0),
+        activeLoansCount: loans.filter(l => l.status === 'ACTIVE').length,
+    };
+
+    return {
+        monthlyData,
+        loanTrends,
+        typeBreakdown,
+        loanMetrics,
+    };
+}
+
+// ============================================
 // COMBINED HOOK FOR ALL DATA
 // ============================================
 
@@ -658,13 +830,34 @@ export function useFinanceData() {
     const { data: loansData, isLoading: loansLoading } = useLoans();
     const { data: dashboardData, isLoading: dashboardLoading } = useDashboard();
 
+    const transactions = transactionsData?.transactions || [];
+    const loans = loansData?.loans || [];
+    const balances = balancesData?.balances || [];
+
+    // Compute enhanced metrics
+    const computedMetrics = computeMonthlyMetrics(transactions, loans);
+
+    // Calculate bank balance
+    const bankBalance = balances
+        .filter((b: { type: string; accountStatus: string; }) => b.type === 'BANK' && b.accountStatus === 'ACTIVE')
+        .reduce((sum: number, b: { balance: string; }) => sum + parseFloat(b.balance), 0);
+
+    // Enhance dashboard data with computed metrics
+    const enhancedDashboard: EnhancedDashboard | undefined = dashboardData?.dashboard
+        ? {
+            ...dashboardData.dashboard,
+            bankBalance,
+            ...computedMetrics,
+        }
+        : undefined;
+
     return {
         user: userData?.user,
         organizations: userData?.organizations || [],
-        balances: balancesData?.balances || [],
-        transactions: transactionsData?.transactions || [],
-        loans: loansData?.loans || [],
-        dashboard: dashboardData?.dashboard,
+        balances,
+        transactions,
+        loans,
+        dashboard: enhancedDashboard,
         isLoading: userLoading || balancesLoading || transactionsLoading || loansLoading || dashboardLoading,
     };
 }

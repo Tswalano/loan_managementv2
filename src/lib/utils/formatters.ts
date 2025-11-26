@@ -1,10 +1,13 @@
 export const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
+    const formatted = new Intl.NumberFormat('en-ZA', {
         style: 'currency',
         currency: 'ZAR',
         minimumFractionDigits: 2
     }).format(amount);
+
+    return formatted.replace('ZAR', 'R').replace('R', 'R');
 };
+
 
 export const formatShortDate = (date: Date): string => {
     return new Intl.DateTimeFormat('en-US', {

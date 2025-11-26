@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { MoreVertical } from 'lucide-react';
+import { formatCurrency } from '@/types';
 
 interface BankCardProps {
     accountName: string;
@@ -82,10 +83,7 @@ export const BankCard: React.FC<BankCardProps> = ({
                             "text-3xl font-bold tracking-tight",
                             isAccentCard ? "text-black" : "text-white"
                         )}>
-                            ${parseFloat(currentBalance).toLocaleString('en-US', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                            })}
+                            {formatCurrency(parseFloat(currentBalance))}
                         </p>
                     </div>
 
