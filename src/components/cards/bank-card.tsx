@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { MoreVertical } from 'lucide-react';
 import { formatCurrency } from '@/types';
+import { maskAccountLast8Grouped } from '@/lib/utils/formatters';
 
 interface BankCardProps {
     accountName: string;
@@ -92,7 +93,7 @@ export const BankCard: React.FC<BankCardProps> = ({
                             "font-mono text-sm tracking-wider",
                             isAccentCard ? "text-black/70" : "text-white/70"
                         )}>
-                            •••• {accountNumber ? accountNumber.slice(-4) : '4576'}
+                            {accountNumber ? maskAccountLast8Grouped(accountNumber) : '3636-3333-3333-3333'}
                         </p>
                         <p className={cn(
                             "font-mono text-sm",

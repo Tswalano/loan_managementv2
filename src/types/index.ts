@@ -124,16 +124,23 @@ export interface Transaction {
     amount: string;
     type: TransactionType;
     category: string;
-    description: string | null;
-    reference: string | null;
+    description: string;
+    reference: string;
+
     fromBalanceId: string | null;
     toBalanceId: string | null;
     loanId: string | null;
-    date: string;
+
+    date: string; // ISO timestamp
     isLoanDisbursement: boolean;
     isLoanPayment: boolean;
+
     metadata: Record<string, any>;
     createdAt: string;
+
+    fromBalance: Balance | null;
+    toBalance: Balance | null;
+    loan: Loan | null;
 }
 
 export interface Loan {

@@ -8,6 +8,7 @@ interface DeleteAccountDialogProps {
     onOpenChange: (open: boolean) => void;
     onConfirm: () => Promise<void>;
     accountName: string;
+    accountNumber: string;
     bankName: string;
     balance: string;
     isDeleting?: boolean;
@@ -18,6 +19,7 @@ export function DeleteAccountDialog({
     onOpenChange,
     onConfirm,
     accountName,
+    accountNumber,
     bankName,
     balance,
     isDeleting
@@ -45,7 +47,7 @@ export function DeleteAccountDialog({
                 <div className="my-6 p-4 rounded-xl border border-red-200 dark:border-red-800/30 bg-red-50/50 dark:bg-red-900/10">
                     <BankCard
                         accountName={accountName}
-                        accountNumber="****"
+                        accountNumber={accountNumber}
                         bankName={bankName}
                         currentBalance={balance}
                         onClick={() => { }}

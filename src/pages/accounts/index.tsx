@@ -362,6 +362,7 @@ export default function AccountManagementPage() {
                         onOpenChange={(open) => !open && setSelectedAccount(null)}
                         onConfirm={handleDeleteAccount}
                         accountName={selectedAccount.accountName}
+                        accountNumber={selectedAccount.accountNumber}
                         bankName={selectedAccount.bankName}
                         balance={selectedAccount.balance}
                         isDeleting={isDeleting}

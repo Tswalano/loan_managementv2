@@ -25,7 +25,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Plus, Search, Download, Calendar, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
-import { formatCurrency, formatShortDate, truncateText } from '@/lib/utils/formatters';
+import { formatCurrency, formatShortDate, maskAccountLast8Grouped, truncateText } from '@/lib/utils/formatters';
 import { CreateTransactionRequest, Transaction, TransactionType } from '@/types';
 import ViewTransactionDialog from '@/components/transactions/transaction-dialog';
 import TransactionForm from '@/components/transactions/transaction-form';
@@ -50,6 +50,8 @@ export default function TransactionsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const rowOptions = [10, 20, 50];
+
+    // console.log("Transactions loaded:", transactions.fromBalance.accountName, transactions.fromBalance.accountNumber);
 
     const handleTransactionCreate = async (formData: CreateTransactionRequest) => {
         try {
@@ -76,8 +78,8 @@ export default function TransactionsPage() {
                     type: formData.type,
                     category: formData.category,
                     description: formData.description,
-                    fromBalanceId: formData.fromBalanceId,
-                    toBalanceId: formData.toBalanceId,
+                    fromBalanceId: formData.type === 'INCOME' ? undefined : formData.fromBalanceId,
+                    toBalanceId: formData.type === 'INCOME' ? formData.fromBalanceId : undefined,
                 });
             }
 
@@ -123,7 +125,9 @@ export default function TransactionsPage() {
     const totalPages = Math.ceil(filteredTransactions.length / rowsPerPage);
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
-    const currentTransactions = filteredTransactions.slice(startIndex, endIndex);
+    const currentTransactions = transactions.slice(startIndex, endIndex);
+
+    console.log("Rendering TransactionsPage:", currentTransactions);
 
     const EmptyState = () => (
         <div className="p-8 min-h-screen">
@@ -326,6 +330,7 @@ export default function TransactionsPage() {
                                 <TableRow className="bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                     <TableHead className="font-semibold text-gray-700 dark:text-gray-300">Date</TableHead>
                                     <TableHead className="font-semibold text-gray-700 dark:text-gray-300">Description</TableHead>
+                                    <TableHead className="font-semibold text-gray-700 dark:text-gray-300">Account</TableHead>
                                     <TableHead className="font-semibold text-gray-700 dark:text-gray-300">Type</TableHead>
                                     <TableHead className="text-right font-semibold text-gray-700 dark:text-gray-300">Amount</TableHead>
                                     <TableHead className="text-right font-semibold text-gray-700 dark:text-gray-300">Actions</TableHead>
@@ -367,6 +372,14 @@ export default function TransactionsPage() {
                                                 </div>
                                                 <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
                                                     {transaction.reference || '-'}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    {transaction.fromBalance?.accountName}
+                                                </div>
+                                                <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                                                    {transaction.fromBalance?.accountNumber ? maskAccountLast8Grouped(transaction.fromBalance?.accountNumber) : 'Outgoing Acct'}
                                                 </div>
                                             </TableCell>
                                             <TableCell>
