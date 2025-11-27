@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from 'react';
+import { useState, useMemo, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal } from 'react';
 import {
     Card,
     CardContent,
@@ -22,14 +22,15 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Wallet, CreditCard } from 'lucide-react';
+import { Plus, Wallet, CreditCard, ArrowRightCircle, ArrowDownToLine, ArrowRightLeft } from 'lucide-react';
 import { api, useBalances } from '@/lib/api';
-import { AccountType, type Balance } from '@/types';
+import { AccountType, TransactionType, type Balance } from '@/types';
 import { DeleteAccountDialog } from '@/components/cards/delete-card';
 import { useToast } from '@/hooks/use-toast';
 import { getCurrentUser } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { BankCard } from '@/components/cards/bank-card';
+import { LoadFundsDialog, TransferDialog } from '@/components/cards/TransferDialogs';
 
 const BANKS = {
     FNB: 'First National Bank',
@@ -53,7 +54,7 @@ interface AccountFormData {
 export default function AccountManagementPage() {
     const user = getCurrentUser();
     const { data: balancesData, isLoading, refetch } = useBalances();
-    const balances = balancesData?.balances || [];
+    const balances = useMemo(() => balancesData?.balances || [], [balancesData]);
 
     const { toast } = useToast();
     const [selectedAccount, setSelectedAccount] = useState<Balance | null>(null);
@@ -65,6 +66,16 @@ export default function AccountManagementPage() {
         bankName: 'FNB',
         initialBalance: 0
     });
+
+    // Transfer dialog state
+    const [isTransferOpen, setIsTransferOpen] = useState(false);
+    const [transferFromId, setTransferFromId] = useState<string | null>(null);
+    const [transferToId, setTransferToId] = useState<string | null>(null);
+    const [transferAmount, setTransferAmount] = useState<number | ''>('');
+    const [transferDescription, setTransferDescription] = useState<string>('');
+    const [isTransferring, setIsTransferring] = useState(false);
+    const [loadFundsOpen, setLoadFundsOpen] = useState(false);
+    const [transferOpen, setTransferOpen] = useState(false);
 
     const generateAccountNumber = () => {
         const accountNumber = [];
@@ -111,7 +122,7 @@ export default function AccountManagementPage() {
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || "Failed to create account. Please try again.",
+                description: error?.message || "Failed to create account. Please try again.",
                 variant: "destructive",
             });
             console.error('Failed to create account:', error);
@@ -138,12 +149,115 @@ export default function AccountManagementPage() {
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || "Failed to delete account. Please try again.",
+                description: error?.message || "Failed to delete account. Please try again.",
                 variant: "destructive",
             });
             console.error('Failed to delete account:', error);
         } finally {
             setIsDeleting(false);
+        }
+    };
+
+    // Helper to find balance by id
+    const findBalance = (id: string | null) => balances.find((b: { id: string | null; }) => b.id === id) || null;
+
+    // Transfer handler: creates two transactions (debit + credit)
+    const handleTransfer = async () => {
+        // Basic validation
+        if (!user) {
+            toast({
+                title: "Error",
+                description: "You must be logged in to perform transfers.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!transferFromId || !transferToId) {
+            toast({
+                title: "Validation error",
+                description: "Select both source and destination accounts.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (transferFromId === transferToId) {
+            toast({
+                title: "Validation error",
+                description: "Source and destination cannot be the same account.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        const amount = typeof transferAmount === 'string' ? parseFloat(transferAmount) : transferAmount;
+        if (!amount || amount <= 0) {
+            toast({
+                title: "Validation error",
+                description: "Enter a valid amount greater than 0.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        const fromBalance = findBalance(transferFromId);
+        if (!fromBalance) {
+            toast({ title: "Error", description: "Source account not found.", variant: "destructive" });
+            return;
+        }
+
+        if (Number(fromBalance.balance) < amount) {
+            toast({
+                title: "Insufficient funds",
+                description: "The source account does not have enough balance.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        // Build two transactions: debit (expense) from source, credit (income) to destination
+        // const referenceBase = `TRANSFER_${Date.now()}`;
+        setIsTransferring(true);
+
+        try {
+            await api.createTransaction({
+                amount: Number(amount.toFixed(2)),
+                type: TransactionType.TRANSFER,
+                category: 'Transfer',
+                description: transferDescription,
+                fromBalanceId: transferFromId,
+                toBalanceId: transferToId,
+            });
+            // })
+            // await api.transferFunds({
+            //     amount: Number(amount.toFixed(2)),
+            //     fromBalanceId: transferFromId,
+            //     toBalanceId: transferToId,
+            //     description: transferDescription
+            // });
+
+            toast({
+                title: "Transfer successful",
+                description: `R${amount.toFixed(2)} transferred from ${fromBalance.accountName} to ${findBalance(transferToId)?.accountName}.`,
+            });
+
+            // Reset transfer form and close
+            setTransferFromId(null);
+            setTransferToId(null);
+            setTransferAmount('');
+            setTransferDescription('');
+            setIsTransferOpen(false);
+            refetch();
+        } catch (error: any) {
+            console.error('Transfer failed', error);
+            toast({
+                title: "Transfer failed",
+                description: error?.message || "An error occurred while performing the transfer.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsTransferring(false);
         }
     };
 
@@ -184,6 +298,9 @@ export default function AccountManagementPage() {
         </Card>
     );
 
+    // Precompute options for selects
+    const balanceOptions = useMemo(() => balances.map((b: Balance) => ({ id: String(b.id ?? ''), label: `${b.accountName} — ${b.accountNumber}`, balance: b.balance })), [balances]);
+
     return (
         <div className="min-h-screen p-8">
             <div className="container mx-auto max-w-7xl">
@@ -197,18 +314,31 @@ export default function AccountManagementPage() {
                             Manage your bank accounts and financial portfolios
                         </p>
                     </div>
-                    <Button
-                        onClick={() => setIsCreateDialogOpen(true)}
-                        className={cn(
-                            "bg-gradient-to-r from-emerald-600 to-emerald-700",
-                            "hover:from-emerald-700 hover:to-emerald-800",
-                            "text-white shadow-lg hover:shadow-xl",
-                            "transition-all duration-300"
-                        )}
-                    >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Account
-                    </Button>
+                    <div className="flex items-center gap-3">
+                        <Button
+                            onClick={() => setLoadFundsOpen(true)}
+                            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                        >
+                            <ArrowDownToLine className="w-4 h-4 mr-2" />
+                            Load Funds
+                        </Button>
+
+                        <Button
+                            onClick={() => setTransferOpen(true)}
+                            className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700"
+                        >
+                            <ArrowRightLeft className="w-4 h-4 mr-2" />
+                            Transfer
+                        </Button>
+
+                        <Button
+                            onClick={() => setIsCreateDialogOpen(true)}
+                            className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                        >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Account
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Accounts Grid */}
@@ -355,6 +485,133 @@ export default function AccountManagementPage() {
                     </DialogContent>
                 </Dialog>
 
+                {/* Transfer Dialog */}
+                <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
+                    <DialogContent className={cn(
+                        "sm:max-w-[520px]",
+                        "backdrop-blur-xl bg-white/95 dark:bg-gray-900/95",
+                        "border border-gray-200/50 dark:border-gray-700/50",
+                        "shadow-2xl dark:shadow-black/40"
+                    )}>
+                        <DialogHeader>
+                            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                                Transfer Funds
+                            </DialogTitle>
+                            <DialogDescription className="text-gray-600 dark:text-gray-400">
+                                Move money between your accounts
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-5 py-4">
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">From Account</Label>
+                                <Select value={transferFromId || ''} onValueChange={(v) => setTransferFromId(v || null)}>
+                                    <SelectTrigger className="h-11 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600">
+                                        <SelectValue placeholder="Select source account" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                                        {balanceOptions.map((opt: { id: string; label: string; balance: string | number; }) => (
+                                            <SelectItem key={opt.id} value={opt.id} className="focus:bg-gray-100 dark:focus:bg-gray-800">
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{opt.label}</span>
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400">{formatBalance(opt.balance)}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">To Account</Label>
+                                <Select value={transferToId || ''} onValueChange={(v) => setTransferToId(v || null)}>
+                                    <SelectTrigger className="h-11 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600">
+                                        <SelectValue placeholder="Select destination account" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                                        {balanceOptions.map((opt: { id: Key | null | undefined; label: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | null | undefined; balance: string | number; }) => (
+                                            <SelectItem key={opt.id} value={String(opt.id)} className="focus:bg-gray-100 dark:focus:bg-gray-800">
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{opt.label}</span>
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400">{formatBalance(opt.balance)}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Amount</Label>
+                                <Input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={transferAmount}
+                                    onChange={(e) => setTransferAmount(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                                    className="h-11 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description (optional)</Label>
+                                <Input
+                                    placeholder="Payment description"
+                                    value={transferDescription}
+                                    onChange={(e) => setTransferDescription(e.target.value)}
+                                    className="h-11 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600"
+                                />
+                            </div>
+                        </div>
+
+                        <DialogFooter className="pt-6 border-t border-gray-200 dark:border-gray-700 gap-3">
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setIsTransferOpen(false);
+                                    setTransferFromId(null);
+                                    setTransferToId(null);
+                                    setTransferAmount('');
+                                    setTransferDescription('');
+                                }}
+                                disabled={isTransferring}
+                                className={cn(
+                                    "bg-gray-100 dark:bg-gray-800",
+                                    "border-gray-300 dark:border-gray-600",
+                                    "text-gray-900 dark:text-white",
+                                    "hover:bg-gray-200 dark:hover:bg-gray-700"
+                                )}
+                            >
+                                Cancel
+                            </Button>
+
+                            <Button
+                                onClick={handleTransfer}
+                                disabled={isTransferring}
+                                className={cn(
+                                    "bg-gradient-to-r from-indigo-600 to-indigo-700",
+                                    "hover:from-indigo-700 hover:to-indigo-800",
+                                    "text-white shadow-lg hover:shadow-xl",
+                                    "transition-all duration-300",
+                                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                                )}
+                            >
+                                {isTransferring ? (
+                                    <>
+                                        <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                        Transferring...
+                                    </>
+                                ) : (
+                                    <>
+                                        <ArrowRightCircle className="w-4 h-4 mr-2" />
+                                        Transfer
+                                    </>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
                 {/* Delete Account Dialog */}
                 {selectedAccount && (
                     <DeleteAccountDialog
@@ -362,13 +619,27 @@ export default function AccountManagementPage() {
                         onOpenChange={(open) => !open && setSelectedAccount(null)}
                         onConfirm={handleDeleteAccount}
                         accountName={selectedAccount.accountName}
-                        accountNumber={selectedAccount.accountNumber}
                         bankName={selectedAccount.bankName}
                         balance={selectedAccount.balance}
-                        isDeleting={isDeleting}
-                    />
+                        isDeleting={isDeleting} accountNumber={selectedAccount.accountNumber} />
                 )}
+
+                <LoadFundsDialog
+                    open={loadFundsOpen}
+                    onOpenChange={setLoadFundsOpen}
+                />
+
+                <TransferDialog
+                    open={transferOpen}
+                    onOpenChange={setTransferOpen}
+                />
             </div>
         </div>
     );
+}
+
+// small helper to format balances consistently
+function formatBalance(b: number | string) {
+    const n = typeof b === 'string' ? parseFloat(b) : b;
+    return `R${n?.toFixed(2)}`;
 }

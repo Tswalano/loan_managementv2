@@ -375,12 +375,25 @@ export default function TransactionsPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                    {transaction.fromBalance?.accountName}
-                                                </div>
-                                                <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                                                    {transaction.fromBalance?.accountNumber ? maskAccountLast8Grouped(transaction.fromBalance?.accountNumber) : 'Outgoing Acct'}
-                                                </div>
+                                                {
+                                                    transaction.fromBalance || transaction.toBalance
+                                                        ? (
+                                                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                    {transaction.fromBalance?.accountName || transaction.toBalance?.accountName || 'Outgoing Transfer'}
+                                                                </div>
+                                                                <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                                                                    {transaction.fromBalance?.accountNumber ? maskAccountLast8Grouped(transaction.fromBalance.accountNumber) :
+                                                                        transaction.toBalance?.accountNumber ? maskAccountLast8Grouped(transaction.toBalance.accountNumber) : 'Outgoing Acct'}
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                        : (
+                                                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                Outgoing Transfer
+                                                            </div>
+                                                        )
+                                                }
                                             </TableCell>
                                             <TableCell>
                                                 <span className={cn(
@@ -392,7 +405,8 @@ export default function TransactionsPage() {
                                                         transaction.type === 'INCOME' && "bg-emerald-600 dark:bg-emerald-400",
                                                         transaction.type === 'EXPENSE' && "bg-orange-600 dark:bg-orange-400",
                                                         transaction.type === 'LOAN_PAYMENT' && "bg-yellow-600 dark:bg-yellow-400",
-                                                        transaction.type === 'LOAN_DISBURSEMENT' && "bg-red-600 dark:bg-red-400"
+                                                        transaction.type === 'LOAN_DISBURSEMENT' && "bg-red-600 dark:bg-red-400",
+                                                        transaction.type === 'TRANSFER' && "bg-lime-600 dark:bg-lime-400"
                                                     )} />
                                                     {transaction.type.replace('_', ' ')}
                                                 </span>

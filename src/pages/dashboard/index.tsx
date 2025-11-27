@@ -6,6 +6,19 @@ import { Wallet, TrendingUp, Users, PiggyBank, ArrowUpRight, ArrowDownRight } fr
 import { useFinanceData } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { MetricCard } from '@/components/dashboard/MetricCard';
+import {
+    AreaChart,
+    Area,
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer,
+    Cell
+} from 'recharts';
 
 interface Transaction {
     id: string;
@@ -17,6 +30,24 @@ interface Transaction {
     isLoanPayment: boolean;
     category: string;
 }
+
+// Custom tooltip components
+const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+        return (
+            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+                <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">{label}</p>
+                {payload.map((entry: any, index: number) => (
+                    <p key={index} className="text-xs text-gray-600 dark:text-gray-400">
+                        <span style={{ color: entry.color }}>{entry.name}: </span>
+                        <span className="font-semibold">{formatCurrency(entry.value)}</span>
+                    </p>
+                ))}
+            </div>
+        );
+    }
+    return null;
+};
 
 const DashboardCharts: React.FC = () => {
     const { isLoading, dashboard } = useFinanceData();
@@ -176,7 +207,7 @@ const DashboardCharts: React.FC = () => {
 
             {/* Charts Grid */}
             <div className="grid gap-6 md:grid-cols-2">
-                {/* Transaction Flow - Smooth Area Chart */}
+                {/* Transaction Flow - Area Chart */}
                 <Card className={cn(
                     "backdrop-blur-xl bg-white/80 dark:bg-gray-900/80",
                     "border border-gray-200/50 dark:border-gray-700/50",
@@ -189,7 +220,7 @@ const DashboardCharts: React.FC = () => {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="h-[300px] relative">
+                        <div className="h-[300px]">
                             {!chartData || chartData.monthlyData.length === 0 ? (
                                 <div className="flex items-center justify-center h-full">
                                     <p className="text-gray-400 dark:text-gray-500 text-sm">
@@ -197,120 +228,60 @@ const DashboardCharts: React.FC = () => {
                                     </p>
                                 </div>
                             ) : (
-                                <svg width="100%" height="100%" className="overflow-visible">
-                                    <defs>
-                                        <linearGradient id="incomeGradient" x1="0" x2="0" y1="0" y2="1">
-                                            <stop offset="0%" stopColor="#10B981" stopOpacity="0.5" />
-                                            <stop offset="100%" stopColor="#10B981" stopOpacity="0.05" />
-                                        </linearGradient>
-                                        <linearGradient id="expenseGradient" x1="0" x2="0" y1="0" y2="1">
-                                            <stop offset="0%" stopColor="#EF4444" stopOpacity="0.5" />
-                                            <stop offset="100%" stopColor="#EF4444" stopOpacity="0.05" />
-                                        </linearGradient>
-                                    </defs>
-
-                                    {/* Grid lines */}
-                                    {[0, 25, 50, 75, 100].map((percent, i) => (
-                                        <g key={i}>
-                                            <line
-                                                x1="40"
-                                                y1={250 - (percent * 2)}
-                                                x2="100%"
-                                                y2={250 - (percent * 2)}
-                                                stroke="currentColor"
-                                                className="stroke-gray-200 dark:stroke-gray-700"
-                                                strokeDasharray="4 4"
-                                                strokeWidth="1"
-                                            />
-                                            <text
-                                                x="5"
-                                                y={255 - (percent * 2)}
-                                                className="fill-gray-500 dark:fill-gray-400 text-xs"
-                                            >
-                                                {(percent * 40) / 10}K
-                                            </text>
-                                        </g>
-                                    ))}
-
-                                    {(() => {
-                                        const data = chartData.monthlyData;
-                                        const maxValue = Math.max(...data.map((d: any) => Math.max(d.income || 0, d.expense || 0)), 1);
-
-                                        // Income path
-                                        const incomePath = data.map((d: any, i: number) => {
-                                            const x = 40 + (i * (100 - 40) / Math.max(data.length - 1, 1));
-                                            const y = 250 - (((d.income || 0) / maxValue) * 200);
-                                            return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-                                        }).join(' ');
-
-                                        // Expense path
-                                        const expensePath = data.map((d: any, i: number) => {
-                                            const x = 40 + (i * (100 - 40) / Math.max(data.length - 1, 1));
-                                            const y = 250 - (((d.expense || 0) / maxValue) * 200);
-                                            return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-                                        }).join(' ');
-
-                                        const lastX = 40 + ((data.length - 1) * (100 - 40) / Math.max(data.length - 1, 1));
-
-                                        return (
-                                            <g>
-                                                {/* Income area */}
-                                                <path
-                                                    d={`${incomePath} L ${lastX} 250 L 40 250 Z`}
-                                                    fill="url(#incomeGradient)"
-                                                />
-                                                <path
-                                                    d={incomePath}
-                                                    fill="none"
-                                                    stroke="#10B981"
-                                                    strokeWidth="3"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                />
-
-                                                {/* Expense area */}
-                                                <path
-                                                    d={`${expensePath} L ${lastX} 250 L 40 250 Z`}
-                                                    fill="url(#expenseGradient)"
-                                                />
-                                                <path
-                                                    d={expensePath}
-                                                    fill="none"
-                                                    stroke="#EF4444"
-                                                    strokeWidth="3"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                />
-
-                                                {/* X-axis labels */}
-                                                {data.map((d: any, i: number) => (
-                                                    <text
-                                                        key={i}
-                                                        x={40 + (i * (100 - 40) / Math.max(data.length - 1, 1))}
-                                                        y="280"
-                                                        textAnchor="middle"
-                                                        className="fill-gray-500 dark:fill-gray-400 text-xs"
-                                                    >
-                                                        {d.month}
-                                                    </text>
-                                                ))}
-                                            </g>
-                                        );
-                                    })()}
-                                </svg>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart
+                                        data={chartData.monthlyData}
+                                        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                                    >
+                                        <defs>
+                                            <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#10B981" stopOpacity={0.5} />
+                                                <stop offset="95%" stopColor="#10B981" stopOpacity={0.05} />
+                                            </linearGradient>
+                                            <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#EF4444" stopOpacity={0.5} />
+                                                <stop offset="95%" stopColor="#EF4444" stopOpacity={0.05} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid
+                                            strokeDasharray="3 3"
+                                            className="stroke-gray-200 dark:stroke-gray-700"
+                                            vertical={false}
+                                        />
+                                        <XAxis
+                                            dataKey="month"
+                                            tick={{ fontSize: 11 }}
+                                            className="fill-gray-500 dark:fill-gray-400"
+                                        />
+                                        <YAxis
+                                            tick={{ fontSize: 11 }}
+                                            className="fill-gray-500 dark:fill-gray-400"
+                                            tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
+                                        />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend
+                                            wrapperStyle={{ fontSize: '12px' }}
+                                            iconType="circle"
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="income"
+                                            name="Income"
+                                            stroke="#10B981"
+                                            strokeWidth={3}
+                                            fill="url(#incomeGradient)"
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="expense"
+                                            name="Expense"
+                                            stroke="#EF4444"
+                                            strokeWidth={3}
+                                            fill="url(#expenseGradient)"
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
                             )}
-                        </div>
-
-                        {/* Legend */}
-                        <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Income</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Expense</span>
-                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -328,7 +299,7 @@ const DashboardCharts: React.FC = () => {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="h-[300px] relative">
+                        <div className="h-[300px]">
                             {!chartData || chartData.loanTrends.length === 0 ? (
                                 <div className="flex items-center justify-center h-full">
                                     <p className="text-gray-400 dark:text-gray-500 text-sm">
@@ -336,186 +307,215 @@ const DashboardCharts: React.FC = () => {
                                     </p>
                                 </div>
                             ) : (
-                                <svg width="100%" height="100%" className="overflow-visible">
-                                    <defs>
-                                        <linearGradient id="disbursementGradient" x1="0" x2="0" y1="0" y2="1">
-                                            <stop offset="0%" stopColor="#818CF8" stopOpacity="0.6" />
-                                            <stop offset="100%" stopColor="#6366F1" stopOpacity="0.3" />
-                                        </linearGradient>
-                                        <linearGradient id="collectionGradient" x1="0" x2="0" y1="0" y2="1">
-                                            <stop offset="0%" stopColor="#C4F546" stopOpacity="0.6" />
-                                            <stop offset="100%" stopColor="#C4F546" stopOpacity="0.2" />
-                                        </linearGradient>
-                                        <linearGradient id="interestGradient" x1="0" x2="0" y1="0" y2="1">
-                                            <stop offset="0%" stopColor="#A78BFA" stopOpacity="0.5" />
-                                            <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.2" />
-                                        </linearGradient>
-                                    </defs>
-
-                                    {(() => {
-                                        const data = chartData.loanTrends;
-                                        const maxValue = Math.max(
-                                            ...data.map((d: any) =>
-                                                (d.disbursements || 0) + (d.payments || 0) + (d.interest || 0)
-                                            ),
-                                            1
-                                        );
-
-                                        // Create stacked paths
-                                        const disbursementPath = data.map((d: any, i: number) => {
-                                            const x = 40 + (i * (100 - 40) / Math.max(data.length - 1, 1));
-                                            const y = 250 - (((d.disbursements || 0) / maxValue) * 200);
-                                            return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-                                        }).join(' ');
-
-                                        const paymentPath = data.map((d: any, i: number) => {
-                                            const x = 40 + (i * (100 - 40) / Math.max(data.length - 1, 1));
-                                            const y = 250 - ((((d.disbursements || 0) + (d.payments || 0)) / maxValue) * 200);
-                                            return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-                                        }).join(' ');
-
-                                        const interestPath = data.map((d: any, i: number) => {
-                                            const x = 40 + (i * (100 - 40) / Math.max(data.length - 1, 1));
-                                            const y = 250 - ((((d.disbursements || 0) + (d.payments || 0) + (d.interest || 0)) / maxValue) * 200);
-                                            return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-                                        }).join(' ');
-
-                                        const lastX = 40 + ((data.length - 1) * (100 - 40) / Math.max(data.length - 1, 1));
-
-                                        return (
-                                            <g>
-                                                {/* Grid */}
-                                                {[0, 25, 50, 75, 100].map((percent, i) => (
-                                                    <line
-                                                        key={i}
-                                                        x1="40"
-                                                        y1={250 - (percent * 2)}
-                                                        x2="100%"
-                                                        y2={250 - (percent * 2)}
-                                                        stroke="currentColor"
-                                                        className="stroke-gray-200 dark:stroke-gray-700"
-                                                        strokeDasharray="4 4"
-                                                        strokeWidth="1"
-                                                    />
-                                                ))}
-
-                                                {/* Disbursements */}
-                                                <path
-                                                    d={`${disbursementPath} L ${lastX} 250 L 40 250 Z`}
-                                                    fill="url(#disbursementGradient)"
-                                                />
-
-                                                {/* Payments */}
-                                                <path
-                                                    d={`${paymentPath} L ${lastX} 250 L 40 250 Z`}
-                                                    fill="url(#collectionGradient)"
-                                                />
-
-                                                {/* Interest */}
-                                                <path
-                                                    d={`${interestPath} L ${lastX} 250 L 40 250 Z`}
-                                                    fill="url(#interestGradient)"
-                                                />
-
-                                                {/* X-axis labels */}
-                                                {data.map((d: any, i: number) => (
-                                                    <text
-                                                        key={i}
-                                                        x={40 + (i * (100 - 40) / Math.max(data.length - 1, 1))}
-                                                        y="280"
-                                                        textAnchor="middle"
-                                                        className="fill-gray-500 dark:fill-gray-400 text-xs"
-                                                    >
-                                                        {d.month}
-                                                    </text>
-                                                ))}
-                                            </g>
-                                        );
-                                    })()}
-                                </svg>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart
+                                        data={chartData.loanTrends}
+                                        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                                    >
+                                        <defs>
+                                            <linearGradient id="disbursementGrad" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#818CF8" stopOpacity={0.6} />
+                                                <stop offset="95%" stopColor="#6366F1" stopOpacity={0.3} />
+                                            </linearGradient>
+                                            <linearGradient id="collectionGrad" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#C4F546" stopOpacity={0.6} />
+                                                <stop offset="95%" stopColor="#C4F546" stopOpacity={0.2} />
+                                            </linearGradient>
+                                            <linearGradient id="interestGrad" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#A78BFA" stopOpacity={0.5} />
+                                                <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.2} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid
+                                            strokeDasharray="3 3"
+                                            className="stroke-gray-200 dark:stroke-gray-700"
+                                            vertical={false}
+                                        />
+                                        <XAxis
+                                            dataKey="month"
+                                            tick={{ fontSize: 11 }}
+                                            className="fill-gray-500 dark:fill-gray-400"
+                                        />
+                                        <YAxis
+                                            tick={{ fontSize: 11 }}
+                                            className="fill-gray-500 dark:fill-gray-400"
+                                            tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
+                                        />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend
+                                            wrapperStyle={{ fontSize: '12px' }}
+                                            iconType="circle"
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="disbursements"
+                                            name="Disbursements"
+                                            stackId="1"
+                                            stroke="#818CF8"
+                                            fill="url(#disbursementGrad)"
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="payments"
+                                            name="Collections"
+                                            stackId="1"
+                                            stroke="#C4F546"
+                                            fill="url(#collectionGrad)"
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="interest"
+                                            name="Interest"
+                                            stackId="1"
+                                            stroke="#A78BFA"
+                                            fill="url(#interestGrad)"
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
                             )}
-                        </div>
-
-                        <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-indigo-500 rounded-full"></div>
-                                <span className="text-xs text-gray-600 dark:text-gray-400">Disbursements</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-[#C4F546] rounded-full"></div>
-                                <span className="text-xs text-gray-600 dark:text-gray-400">Collections</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                                <span className="text-xs text-gray-600 dark:text-gray-400">Interest</span>
-                            </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Transaction Distribution - Horizontal Bars */}
+                {/* Transaction Distribution - Horizontal Bar Chart */}
+                {/* Transaction Distribution - Horizontal Bar Chart */}
                 <Card className={cn(
                     "backdrop-blur-xl bg-white/80 dark:bg-gray-900/80",
                     "border border-gray-200/50 dark:border-gray-700/50",
                     "rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/20"
                 )}>
+                    {/* Title Section */}
                     <CardHeader>
-                        <CardTitle className="text-gray-900 dark:text-white">Transaction Distribution</CardTitle>
-                        <CardDescription className="text-gray-600 dark:text-gray-400">
-                            Breakdown by transaction type
+                        <CardTitle className="text-lg">Transaction Distribution</CardTitle>
+                        <CardDescription className="text-sm text-gray-500 dark:text-gray-400">
+                            Breakdown by type
                         </CardDescription>
                     </CardHeader>
+
                     <CardContent>
-                        <div className="space-y-5">
-                            {!chartData || chartData.typeBreakdown.length === 0 ? (
-                                <div className="flex items-center justify-center h-32">
-                                    <p className="text-gray-400 dark:text-gray-500 text-sm">
-                                        No transaction breakdown available yet
-                                    </p>
-                                </div>
-                            ) : (
-                                chartData.typeBreakdown.map((item: any, index: number) => {
-                                    const maxAmount = chartData.typeBreakdown[0].amount;
-                                    const percentage = (item.amount / maxAmount) * 100;
-
-                                    const colors = [
-                                        'from-red-500 to-red-600',
-                                        'from-[#C4F546] to-green-500',
-                                        'from-purple-500 to-purple-600',
-                                        'from-blue-500 to-blue-600',
-                                        'from-orange-500 to-orange-600'
-                                    ];
-
+                        {/* FIX: give the chart a fixed height so ResponsiveContainer can size itself */}
+                        <div className="h-[300px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                {(() => {
                                     const typeLabels: Record<string, string> = {
-                                        'EXPENSE': 'Expenses',
-                                        'INCOME': 'Income',
-                                        'LOAN_PAYMENT': 'Loan Payments',
-                                        'LOAN_DISBURSEMENT': 'Loan Disbursements'
+                                        EXPENSE: "Expenses",
+                                        INCOME: "Income",
+                                        LOAN_PAYMENT: "Loan Payments",
+                                        LOAN_DISBURSEMENT: "Loan Disbursements",
+                                        TRANSFER: "Transfers"
                                     };
 
-                                    return (
-                                        <div key={index} className="space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    {typeLabels[item.type] || item.type}
-                                                </span>
-                                                <span className="text-sm font-bold text-gray-900 dark:text-white">
-                                                    {formatCurrency(item.amount)}
-                                                </span>
-                                            </div>
-                                            <div className="relative w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 overflow-hidden">
-                                                <div
-                                                    className={`h-full bg-gradient-to-r ${colors[index % colors.length]} rounded-full transition-all duration-1000 ease-out shadow-lg`}
-                                                    style={{ width: `${percentage}%` }}
-                                                />
-                                            </div>
+                                    const colorMap: Record<string, { start: string; end: string }> = {
+                                        EXPENSE: { start: "#F43F5E", end: "#FB7185" },
+                                        INCOME: { start: "#8B5CF6", end: "#A78BFA" },
+                                        LOAN_PAYMENT: { start: "#3B82F6", end: "#60A5FA" },
+                                        LOAN_DISBURSEMENT: { start: "#14B8A6", end: "#2DD4BF" },
+                                        TRANSFER: { start: "#F59E0B", end: "#FBBF24" }
+                                    };
+
+                                    const data = (chartData?.typeBreakdown || []).map((item: any, index: number) => ({
+                                        ...item,
+                                        amount: Number(item.amount) || 0, // ensure number
+                                        displayName: typeLabels[item.type] || item.type,
+                                        gradientId: `barGradient${index}`,
+                                        color: colorMap[item.type] || { start: "#94A3B8", end: "#CBD5E1" }
+                                    }));
+
+                                    const renderLegend = () => (
+                                        <div className="flex flex-wrap gap-4 px-2 pb-2">
+                                            {data.map((item: any, index: number) => (
+                                                <div key={index} className="flex items-center space-x-2">
+                                                    <div
+                                                        className="w-4 h-4 rounded"
+                                                        style={{
+                                                            background: `linear-gradient(to right, ${item.color.start}, ${item.color.end})`
+                                                        }}
+                                                    />
+                                                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                                                        {item.displayName}
+                                                    </span>
+                                                </div>
+                                            ))}
                                         </div>
                                     );
-                                })
-                            )}
+
+                                    return (
+                                        <BarChart
+                                            data={data}
+                                            layout="vertical"
+                                            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                                            barSize={28}
+                                            // optional safety if you want to limit bar width
+                                            maxBarSize={40}
+                                        >
+                                            {/* Gradients */}
+                                            <defs>
+                                                {data.map((item: any, index: number) => (
+                                                    <linearGradient key={index} id={item.gradientId} x1="0" y1="0" x2="1" y2="0">
+                                                        <stop offset="0%" stopColor={item.color.start} />
+                                                        <stop offset="100%" stopColor={item.color.end} />
+                                                    </linearGradient>
+                                                ))}
+                                            </defs>
+
+                                            <CartesianGrid
+                                                strokeDasharray="3 3"
+                                                className="stroke-gray-200/20 dark:stroke-gray-700/20"
+                                                horizontal={false}
+                                            />
+
+                                            {/* Hide Y Axis labels */}
+                                            <YAxis type="category" dataKey="displayName" hide />
+
+                                            {/* Keep numeric X Axis transparent but set domain to [0, dataMax] to avoid weird auto-scaling */}
+                                            <XAxis
+                                                type="number"
+                                                hide
+                                                domain={[0, 'dataMax']}
+                                            />
+
+                                            {/* Tooltip */}
+                                            <Tooltip
+                                                formatter={(v: any) => formatCurrency(Number(v))}
+                                                contentStyle={{
+                                                    backgroundColor: "rgba(17, 24, 39, 0.95)",
+                                                    border: "1px solid rgba(75,85,99,0.3)",
+                                                    borderRadius: "0.75rem",
+                                                    fontSize: "12px",
+                                                    color: "#fff",
+                                                    padding: "12px",
+                                                    boxShadow: "0 10px 25px rgba(0,0,0,0.3)"
+                                                }}
+                                                cursor={{ fill: "rgba(100, 116, 139, 0.04)" }}
+                                            />
+
+                                            {/* Bars */}
+                                            <Bar dataKey="amount" radius={[0, 12, 12, 0]}>
+                                                {data.map((entry: any, index: number) => (
+                                                    <Cell
+                                                        key={index}
+                                                        fill={`url(#${entry.gradientId})`}
+                                                        className="transition-opacity hover:opacity-90"
+                                                    />
+                                                ))}
+                                            </Bar>
+
+                                            {/* Legend */}
+                                            <Legend
+                                                verticalAlign="top"
+                                                align="left"
+                                                height={60}
+                                                content={renderLegend}
+                                            />
+                                        </BarChart>
+                                    );
+                                })()}
+                            </ResponsiveContainer>
                         </div>
                     </CardContent>
                 </Card>
+
+
 
                 {/* Recent Activity */}
                 <Card className={cn(
