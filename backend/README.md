@@ -28,22 +28,6 @@ backend-server/
 └── 📖 QUICK_START.md      (5.1K) - Quick setup guide
 ```
 
-## 🚀 Key Features Implemented
-
-### Authentication & Security
-✅ JWT token generation and verification
-✅ Password hashing with HMAC-SHA256 + salt
-✅ Secure authentication middleware
-✅ Token expiration (7 days default)
-✅ Protected route examples
-
-### Database Layer
-✅ Complete PostgreSQL schema with Drizzle ORM
-✅ Type-safe database queries
-✅ Relations between tables (users, balances, transactions, loans)
-✅ Automatic migrations
-✅ Connection pooling
-
 # Finance Flow API Documentation
 
 ## Overview

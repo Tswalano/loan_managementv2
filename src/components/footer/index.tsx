@@ -6,7 +6,7 @@ const Footer: React.FC = () => {
     const year = new Date().getFullYear();
 
     return (
-        <footer className="bg-gray-900 border-t border-gray-800">
+        <footer className="mt-auto bg-gray-900 border-t border-gray-800">
             <div className="container mx-auto px-4 py-12">
                 {/* Main footer content */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
@@ -66,6 +66,31 @@ const Footer: React.FC = () => {
                     </div>
                 </div>
             </div>
+        </footer >
+    );
+};
+
+const MinimumFooter: React.FC = () => {
+    const year = new Date().getFullYear();
+
+    return (
+        <footer className="w-full py-8 mt-auto backdrop-blur-xl">
+            <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-4 text-gray-600 dark:text-gray-400 text-sm">
+                <p>
+                    <span className="font-bold bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent">
+                        FinanceFlow
+                    </span>
+                    {" "} © {year}{" "} All rights reserved.
+                </p>
+                <div className="flex gap-6">
+                    <Link to="#" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors font-medium">
+                        Privacy Policy
+                    </Link>
+                    <Link to="#" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors font-medium">
+                        Terms of Service
+                    </Link>
+                </div>
+            </div>
         </footer>
     );
 };
@@ -93,3 +118,4 @@ const FooterButton: React.FC<FooterButtonProps> = ({ text }) => (
 );
 
 export default Footer;
+export { MinimumFooter };

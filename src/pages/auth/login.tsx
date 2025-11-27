@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
 import { BACKEND_API_URL } from '@/lib/utils/consts';
 import { cn } from '@/lib/utils';
+import { MinimumFooter } from '@/components/footer';
 
 const DEMO_EMAIL = "email@financeco.com";
 const DEMO_PASSWORD = "Admin123";
@@ -32,7 +33,6 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
-    const year = new Date().getFullYear();
 
     const from = (location.state as any)?.from?.pathname || '/app';
 
@@ -386,25 +386,7 @@ export default function LoginPage() {
             </main>
 
             {/* Footer */}
-            <footer className="w-full py-8 mt-8 border-t border-gray-200/50 dark:border-gray-700/50 backdrop-blur-xl">
-                <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-4 text-gray-600 dark:text-gray-400 text-sm">
-                    <p>
-                        © {year}{" "}
-                        <span className="font-bold bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent">
-                            FinanceFlow
-                        </span>
-                        . All rights reserved.
-                    </p>
-                    <div className="flex gap-6">
-                        <Link to="#" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors font-medium">
-                            Privacy Policy
-                        </Link>
-                        <Link to="#" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors font-medium">
-                            Terms of Service
-                        </Link>
-                    </div>
-                </div>
-            </footer>
+            <MinimumFooter />
         </div>
     );
 }
