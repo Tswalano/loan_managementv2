@@ -5,6 +5,7 @@ import Footer from '@/components/footer';
 import { useTheme } from '@/components/theme-provider';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface MetricCardProps {
     number: string;
@@ -30,8 +31,7 @@ const LandingPage: React.FC = () => {
     const { theme } = useTheme();
     const navigate = useNavigate();
 
-    const handleStart = () => (window.location.href = '/app');
-    const handlePreview = () => navigate('/preview');
+    const handleStart = () => navigate('/app');
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50 dark:from-gray-950 dark:via-gray-900 dark:to-emerald-950">
@@ -70,24 +70,13 @@ const LandingPage: React.FC = () => {
 
                         {/* Right: Auth + Theme */}
                         <div className="flex items-center gap-4">
-                            <Link
-                                to="/app/login"
-                                className="hidden sm:inline text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                            <Button
+                                size="sm"
+                                onClick={() => navigate('/app/login')}
+                                className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
                             >
                                 Login
-                            </Link>
-                            <Link
-                                to="/signup"
-                                className={cn(
-                                    "inline-flex items-center text-sm font-semibold rounded-xl px-5 py-2.5",
-                                    "bg-gradient-to-r from-emerald-600 to-emerald-700",
-                                    "hover:from-emerald-700 hover:to-emerald-800",
-                                    "text-white shadow-lg hover:shadow-xl",
-                                    "transition-all duration-300"
-                                )}
-                            >
-                                Sign Up
-                            </Link>
+                            </Button>
                             <ThemeToggle />
                         </div>
                     </div>
@@ -136,7 +125,7 @@ const LandingPage: React.FC = () => {
                         </p>
 
                         {/* CTAs */}
-                        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+                        {/* <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
                             <button
                                 onClick={handleStart}
                                 className={cn(
@@ -164,7 +153,7 @@ const LandingPage: React.FC = () => {
                             >
                                 Preview Platform
                             </button>
-                        </div>
+                        </div> */}
                     </div>
 
                     {/* Dashboard preview */}
@@ -217,32 +206,32 @@ const LandingPage: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                         {[
                             {
-                                img: '/feature-tasks.svg',
+                                img: '/automated-reports.png',
                                 title: 'Automate Reports',
                                 desc: 'Generate and download comprehensive transaction reports with a single click.'
                             },
                             {
-                                img: '/feature-goals.svg',
+                                img: '/transaction-management.png',
                                 title: 'Transaction Management',
                                 desc: 'Track and manage all your financial transactions in one place.'
                             },
                             {
-                                img: '/feature-progress.svg',
+                                img: '/multi-source.png',
                                 title: 'Multi-Source Balance',
                                 desc: 'Connect and monitor balances from different accounts and sources.'
                             },
                             {
-                                img: '/feature-projects.svg',
+                                img: '/security.png',
                                 title: 'Enterprise Security',
                                 desc: 'Bank-level encryption and security features to protect your data.'
                             },
                             {
-                                img: '/feature-insights.svg',
+                                img: '/trend-analytics.png',
                                 title: 'Trend Analysis',
                                 desc: 'Visualize spending patterns and identify trends with interactive charts.'
                             },
                             {
-                                img: '/feature-security.svg',
+                                img: '/realtime-insight.png',
                                 title: 'Real-time Insights',
                                 desc: 'Get instant insights into your financial health with live dashboards.'
                             }
@@ -298,18 +287,18 @@ const LandingPage: React.FC = () => {
                     </div>
                     <div className="relative">
                         <div className="absolute inset-0 bg-gradient-to-br from-emerald-200/30 to-teal-200/30 dark:from-emerald-800/20 dark:to-teal-800/20 rounded-3xl blur-3xl" />
-                        <div className={cn(
+                        {/* <div className={cn(
                             "relative rounded-3xl overflow-hidden",
                             "backdrop-blur-xl bg-white/80 dark:bg-gray-900/80",
                             "border border-gray-200/50 dark:border-gray-700/50",
                             "shadow-2xl dark:shadow-black/40"
-                        )}>
-                            <img
-                                src="/table-professor.svg"
-                                alt="Platform statistics"
-                                className="w-full h-[420px] object-cover"
-                            />
-                        </div>
+                        )}> */}
+                        <img
+                            src="/automated-reports2.png"
+                            alt="Platform statistics"
+                            className="w-full h-[420px] object-contain"
+                        />
+                        {/* </div> */}
                     </div>
                 </div>
             </section>

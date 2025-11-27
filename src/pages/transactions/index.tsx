@@ -177,7 +177,7 @@ export default function TransactionsPage() {
 
     if (isLoading && transactions.length === 0) {
         return (
-            <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-950">
+            <div className="flex items-center justify-center h-screen">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 dark:border-gray-700 border-t-emerald-600 dark:border-t-[#C4F546]" />
             </div>
         );
@@ -198,7 +198,7 @@ export default function TransactionsPage() {
     }
 
     return (
-        <div className="p-8 space-y-8 min-h-screen">
+        <div className="p-8 space-y-8">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>

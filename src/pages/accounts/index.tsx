@@ -302,7 +302,7 @@ export default function AccountManagementPage() {
     const balanceOptions = useMemo(() => balances.map((b: Balance) => ({ id: String(b.id ?? ''), label: `${b.accountName} — ${b.accountNumber}`, balance: b.balance })), [balances]);
 
     return (
-        <div className="min-h-screen p-8">
+        <div className="p-8">
             <div className="container mx-auto max-w-7xl">
                 {/* Header */}
                 <div className="mb-8 flex items-center justify-between">

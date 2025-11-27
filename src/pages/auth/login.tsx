@@ -174,24 +174,6 @@ export default function LoginPage() {
                         </span>
                     </Link>
                     <div className="flex items-center gap-4">
-                        <Link
-                            to="/"
-                            className="hidden sm:inline text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
-                        >
-                            Home
-                        </Link>
-                        <Link
-                            to="/signup"
-                            className={cn(
-                                "inline-flex items-center text-sm font-semibold rounded-xl px-5 py-2.5",
-                                "bg-gradient-to-r from-emerald-600 to-emerald-700",
-                                "hover:from-emerald-700 hover:to-emerald-800",
-                                "text-white shadow-lg hover:shadow-xl",
-                                "transition-all duration-300"
-                            )}
-                        >
-                            Sign Up
-                        </Link>
                         <ThemeToggle />
                     </div>
                 </div>
@@ -398,19 +380,6 @@ export default function LoginPage() {
                             <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
                                 Manage your lending business efficiently with our powerful dashboard and analytics tools.
                             </p>
-
-                            {/* Feature badges */}
-                            <div className="flex flex-wrap gap-3 justify-center mt-8">
-                                <span className="px-4 py-2 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    📊 Analytics
-                                </span>
-                                <span className="px-4 py-2 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    💰 Payments
-                                </span>
-                                <span className="px-4 py-2 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    📈 Reports
-                                </span>
-                            </div>
                         </div>
                     </div>
                 </div>

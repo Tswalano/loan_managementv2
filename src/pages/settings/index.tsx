@@ -79,7 +79,7 @@ export default function SettingsAndProfilePage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-8">
+        <div className="p-8">
             <div className="container mx-auto max-w-7xl">
                 {/* Header */}
                 <div className="mb-8">
