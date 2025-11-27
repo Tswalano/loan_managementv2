@@ -1,10 +1,13 @@
 export const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
+    const formatted = new Intl.NumberFormat('en-ZA', {
         style: 'currency',
         currency: 'ZAR',
         minimumFractionDigits: 2
     }).format(amount);
+
+    return formatted.replace('ZAR', 'R').replace('R', 'R');
 };
+
 
 export const formatShortDate = (date: Date): string => {
     return new Intl.DateTimeFormat('en-US', {
@@ -32,6 +35,18 @@ export function formalize(input: string): string {
         .replace(/_/g, ' ') // Replace underscores with spaces
         .replace(/\b\w/g, (char) => char.toUpperCase()); // Capitalize the first letter of each word
 }
+
+export const maskAccountLast8Grouped = (account: string): string => {
+    const clean = account.replace(/\D/g, "");
+    const last8 = clean.slice(-8);
+    const last8Groups = last8.match(/.{1,4}/g) || [];
+
+    const maskedGroups = Math.ceil((clean.length - 8) / 4);
+    const groups = Array(maskedGroups).fill("****");
+
+    return [...groups, ...last8Groups].join(" ");
+};
+
 
 export function generateReferenceNumber(transactionType: string): string {
     const prefixes: { [key: string]: string } = {

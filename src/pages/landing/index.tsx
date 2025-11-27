@@ -1,160 +1,175 @@
 import React from 'react';
-import { Download, Mail, Wallet, ArrowUpDown, LineChart, Shield, PiggyBank } from 'lucide-react';
+import { PiggyBank, ArrowRight } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import Footer from '@/components/footer';
 import { useTheme } from '@/components/theme-provider';
 import { Link, useNavigate } from 'react-router-dom';
-
-// Interface definitions
-interface Feature {
-    icon: React.ReactNode;
-    title: string;
-    description: string;
-}
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface MetricCardProps {
     number: string;
     label: string;
 }
 
-// Constants
-const features: Feature[] = [
-    {
-        icon: <Download className="w-8 h-8" />,
-        title: "Automated Reports",
-        description: "Generate and download comprehensive transaction reports with a single click."
-    },
-    {
-        icon: <ArrowUpDown className="w-8 h-8" />,
-        title: "Transaction Management",
-        description: "Easily track and manage all your financial transactions in one place."
-    },
-    {
-        icon: <Wallet className="w-8 h-8" />,
-        title: "Multi-Source Balance",
-        description: "Connect and monitor balances from different accounts and sources."
-    },
-    {
-        icon: <Mail className="w-8 h-8" />,
-        title: "Monthly Reports",
-        description: "Receive automated monthly reports summarizing your financial activity."
-    },
-    {
-        icon: <LineChart className="w-8 h-8" />,
-        title: "Trend Analysis",
-        description: "Visualize spending patterns and identify trends with interactive charts."
-    },
-    {
-        icon: <Shield className="w-8 h-8" />,
-        title: "Enterprise Security",
-        description: "Bank-level encryption and security features to protect your data."
-    }
-];
-
-// Component definitions
-const FeatureCard: React.FC<Feature> = ({ icon, title, description }) => {
-    return (
-        <div className="p-8 bg-white dark:bg-gray-900 rounded-2xl">
-            <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-6">
-                {icon}
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                {title}
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300">
-                {description}
-            </p>
+const MetricCard: React.FC<MetricCardProps> = ({ number, label }) => (
+    <div className={cn(
+        "p-6 rounded-2xl",
+        "backdrop-blur-xl bg-white/80 dark:bg-gray-800/80",
+        "border border-gray-200/50 dark:border-gray-700/50",
+        "shadow-lg hover:shadow-xl",
+        "transition-all duration-300 hover:-translate-y-1"
+    )}>
+        <div className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-700 dark:from-emerald-400 dark:to-emerald-500 bg-clip-text text-transparent mb-2">
+            {number}
         </div>
-    );
-};
-
-const MetricCard: React.FC<MetricCardProps> = ({ number, label }) => {
-    return (
-        <div>
-            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-2">
-                {number}
-            </div>
-            <div className="text-gray-600 dark:text-gray-300">
-                {label}
-            </div>
-        </div>
-    );
-};
+        <div className="text-sm font-medium text-gray-600 dark:text-gray-400">{label}</div>
+    </div>
+);
 
 const LandingPage: React.FC = () => {
     const { theme } = useTheme();
     const navigate = useNavigate();
 
-    const handleStartTrial = (): void => {
-        // Navigate to signup or trial page
-        window.location.href = '/app';
-    };
-
-    const handleContactSales = (): void => {
-        navigate('/contact-sales');
-    };
+    const handleStart = () => navigate('/app');
 
     return (
-        <div className="min-h-screen bg-white dark:bg-gray-900">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50 dark:from-gray-950 dark:via-gray-900 dark:to-emerald-950">
             {/* Navigation */}
-            <nav className="border-b border-gray-200 dark:border-gray-800 py-4">
-                <div className="container mx-auto px-4">
-                    <div className="flex justify-between items-center">
-                        <div className="text-2xl font-bold text-emerald-600">
-                            <div className="flex-shrink-0">
-                                <Link to="/" className="flex items-center text-2xl font-bold text-emerald-600 dark:text-emerald-500">
-                                    <PiggyBank className="h-6 w-6 mr-2" />
-                                    FinanceFlow
-                                </Link>
+            <nav className="sticky top-6 z-50 mx-auto max-w-7xl px-4">
+                <div className={cn(
+                    "rounded-2xl",
+                    "backdrop-blur-xl bg-white/80 dark:bg-gray-900/80",
+                    "border border-gray-200/50 dark:border-gray-700/50",
+                    "shadow-xl dark:shadow-2xl dark:shadow-black/20",
+                    "px-6 py-4"
+                )}>
+                    <div className="flex items-center justify-between">
+                        {/* Left: Brand */}
+                        <Link to="/" className="flex items-center font-bold text-xl group">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mr-3 shadow-lg group-hover:scale-110 transition-transform">
+                                <PiggyBank className="h-5 w-5 text-white" />
                             </div>
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                            <a
-                                href="/app"
-                                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-                            >
-                                Get started
+                            <span className="bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                                FinanceFlow
+                            </span>
+                        </Link>
+
+                        {/* Center: Links */}
+                        <div className="hidden md:flex items-center gap-8 text-sm font-medium">
+                            <a href="#features" className="text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                                Features
                             </a>
-                            {/* Theme Toggle */}
-                            <div className="">
-                                <ThemeToggle />
-                            </div>
+                            <a href="#metrics" className="text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                                Why Us
+                            </a>
+                            <a href="#pricing" className="text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                                Pricing
+                            </a>
+                        </div>
+
+                        {/* Right: Auth + Theme */}
+                        <div className="flex items-center gap-4">
+                            <Button
+                                size="sm"
+                                onClick={() => navigate('/app/login')}
+                                className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                            >
+                                Login
+                            </Button>
+                            <ThemeToggle />
                         </div>
                     </div>
                 </div>
             </nav>
 
             {/* Hero Section */}
-            <header className="relative pt-16 md:pt-24 pb-36">
-                <div className="container mx-auto px-4">
-                    {/* Small badge */}
-                    <div className="flex justify-center mb-8">
-                        <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-sm">
-                            <span className="text-emerald-600 dark:text-emerald-400">Excuse the mess, We are still in</span>
-                            <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400 rounded-full text-xs font-medium">
-                                Development
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="text-center max-w-4xl mx-auto">
-                        <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 dark:text-white mb-6">
-                            Streamline Your Financial Operations with Our SaaS Solution
-                        </h1>
-                        <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-                            Manage loans, track expenses, and gain insights with our comprehensive financial management platform. Perfect for businesses of all sizes.
-                        </p>
-                    </div>
+            <header className="relative overflow-hidden pt-20 pb-16 md:pt-32 md:pb-24">
+                {/* Background gradient */}
+                <div aria-hidden className="pointer-events-none absolute inset-0">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[800px] w-[1000px] rounded-full blur-3xl opacity-40
+                          bg-gradient-to-br from-emerald-300/40 via-emerald-200/30 to-transparent 
+                          dark:from-emerald-500/30 dark:via-emerald-600/20 dark:to-transparent" />
                 </div>
 
-                {/* Dashboard Preview */}
-                <div className="container mx-auto px-4 mt-16">
-                    <div className="relative">
-                        <div className="w-full h-[780px] rounded-lg overflow-hidden">
+                <div className="relative mx-auto max-w-7xl px-4">
+                    {/* Badge */}
+                    <div className={cn(
+                        "mx-auto mb-6 flex w-fit items-center gap-2 rounded-full",
+                        "backdrop-blur-xl bg-white/80 dark:bg-gray-900/80",
+                        "border border-emerald-200/50 dark:border-emerald-700/50",
+                        "px-4 py-2 text-sm shadow-lg",
+                        "group hover:border-emerald-400 dark:hover:border-emerald-500",
+                        "transition-all duration-300"
+                    )}>
+                        <span className="rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 px-3 py-1 text-xs font-bold uppercase tracking-wide">
+                            New
+                        </span>
+                        <span className="text-gray-700 dark:text-gray-300">We've just released a new feature</span>
+                        <ArrowRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:translate-x-1 transition-transform" />
+                    </div>
+
+                    {/* Headline */}
+                    <div className="text-center mx-auto max-w-4xl">
+                        <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-gray-900 dark:text-white leading-[1.1] mb-6">
+                            Boost Your{" "}
+                            <span className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 bg-clip-text text-transparent">
+                                Productivity
+                            </span>
+                            ,<br className="hidden md:block" />
+                            Simplify Your Finance
+                        </h1>
+                        <p className="mt-6 text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto leading-relaxed">
+                            We simplify the intricacies of your financial operations with a user-friendly platform
+                            that not only manages your tasks effortlessly but also enhances overall efficiency.
+                        </p>
+
+                        {/* CTAs */}
+                        {/* <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+                            <button
+                                onClick={handleStart}
+                                className={cn(
+                                    "inline-flex items-center justify-center rounded-xl px-8 py-4 text-base font-semibold",
+                                    "bg-gradient-to-r from-emerald-600 to-emerald-700",
+                                    "hover:from-emerald-700 hover:to-emerald-800",
+                                    "text-white shadow-xl hover:shadow-2xl",
+                                    "transition-all duration-300 hover:scale-105"
+                                )}
+                            >
+                                Get Started
+                                <ArrowRight className="ml-2 w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={handlePreview}
+                                className={cn(
+                                    "inline-flex items-center justify-center rounded-xl px-8 py-4 text-base font-semibold",
+                                    "backdrop-blur-xl bg-white/80 dark:bg-gray-800/80",
+                                    "border-2 border-emerald-500/50 dark:border-emerald-500/30",
+                                    "text-emerald-700 dark:text-emerald-400",
+                                    "hover:bg-emerald-50 dark:hover:bg-emerald-900/20",
+                                    "hover:border-emerald-600 dark:hover:border-emerald-400",
+                                    "transition-all duration-300 hover:scale-105"
+                                )}
+                            >
+                                Preview Platform
+                            </button>
+                        </div> */}
+                    </div>
+
+                    {/* Dashboard preview */}
+                    <div className="relative mt-20 md:mt-28">
+                        {/* Glow effect */}
+                        <div aria-hidden className="absolute -inset-12 rounded-[40px] bg-gradient-to-b from-emerald-200/40 via-emerald-300/20 to-transparent dark:from-emerald-500/20 dark:via-emerald-600/10 blur-3xl" />
+                        <div className={cn(
+                            "relative rounded-3xl overflow-hidden",
+                            "backdrop-blur-xl bg-white/80 dark:bg-gray-900/80",
+                            "border border-gray-200/50 dark:border-gray-700/50",
+                            "shadow-2xl dark:shadow-black/40"
+                        )}>
                             <img
                                 src={theme === 'dark' ? '/dashboard-light.png' : '/dashboard.png'}
-                                alt="Dashboard preview"
-                                className="w-full h-full max-w-full rounded-2xl"
+                                alt="FinanceFlow dashboard preview"
+                                className="w-full h-auto object-cover"
                             />
                         </div>
                     </div>
@@ -162,84 +177,176 @@ const LandingPage: React.FC = () => {
             </header>
 
             {/* Features Section */}
-            <section className="py-24 bg-gray-50 dark:bg-gray-800">
-                <div className="container mx-auto px-4">
-                    <div className="text-center max-w-3xl mx-auto mb-16">
-                        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
-                            Everything you need to manage your finances
+            <section id="features" className="py-24 relative">
+                <div className="max-w-7xl mx-auto px-4">
+                    {/* Section Header */}
+                    <div className="text-center max-w-3xl mx-auto mb-20">
+                        <div className={cn(
+                            "inline-flex items-center justify-center mb-6 px-5 py-2 rounded-full",
+                            "backdrop-blur-xl bg-white/80 dark:bg-gray-800/80",
+                            "border border-gray-200/50 dark:border-gray-700/50",
+                            "text-gray-700 dark:text-gray-300 text-sm font-semibold shadow-lg"
+                        )}>
+                            Features
+                        </div>
+                        <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+                            Boost productivity with our
+                            <br />
+                            <span className="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
+                                user-friendly Finance App
+                            </span>
                         </h2>
-                        <p className="text-lg text-gray-600 dark:text-gray-300">
-                            Powerful features to help you track, manage, and grow your business
+                        <p className="text-lg text-gray-600 dark:text-gray-400">
+                            Embrace efficiency with the intuitive design of our tools — making productivity and
+                            financial management a seamless part of your daily routine.
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {features.map((feature, index) => (
-                            <FeatureCard
-                                key={index}
-                                icon={feature.icon}
-                                title={feature.title}
-                                description={feature.description}
-                            />
+                    {/* Feature Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {[
+                            {
+                                img: '/automated-reports.png',
+                                title: 'Automate Reports',
+                                desc: 'Generate and download comprehensive transaction reports with a single click.'
+                            },
+                            {
+                                img: '/transaction-management.png',
+                                title: 'Transaction Management',
+                                desc: 'Track and manage all your financial transactions in one place.'
+                            },
+                            {
+                                img: '/multi-source.png',
+                                title: 'Multi-Source Balance',
+                                desc: 'Connect and monitor balances from different accounts and sources.'
+                            },
+                            {
+                                img: '/security.png',
+                                title: 'Enterprise Security',
+                                desc: 'Bank-level encryption and security features to protect your data.'
+                            },
+                            {
+                                img: '/trend-analytics.png',
+                                title: 'Trend Analysis',
+                                desc: 'Visualize spending patterns and identify trends with interactive charts.'
+                            },
+                            {
+                                img: '/realtime-insight.png',
+                                title: 'Real-time Insights',
+                                desc: 'Get instant insights into your financial health with live dashboards.'
+                            }
+                        ].map((feature, idx) => (
+                            <div
+                                key={idx}
+                                className={cn(
+                                    "p-8 rounded-3xl",
+                                    "backdrop-blur-xl bg-white/80 dark:bg-gray-800/80",
+                                    "border border-gray-200/50 dark:border-gray-700/50",
+                                    "shadow-lg hover:shadow-2xl dark:hover:shadow-black/40",
+                                    "transition-all duration-300 hover:-translate-y-2",
+                                    "group"
+                                )}
+                            >
+                                <div className="flex flex-col items-center text-center">
+                                    <div className="mb-6 w-48 h-32 flex items-center justify-center">
+                                        <img
+                                            src={feature.img}
+                                            alt={feature.title}
+                                            className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
+                                        />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+                                        {feature.title}
+                                    </h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                                        {feature.desc}
+                                    </p>
+                                </div>
+                            </div>
                         ))}
                     </div>
                 </div>
             </section>
 
             {/* Metrics Section */}
-            <section className="py-24">
-                <div className="container mx-auto px-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-                        <div>
-                            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
-                                Trusted by businesses worldwide
-                            </h2>
-                            <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
-                                Our platform helps businesses manage their finances more effectively, leading to better outcomes and growth.
-                            </p>
-                            <div className="grid grid-cols-2 gap-8">
-                                <MetricCard number="10k+" label="Active users" />
-                                <MetricCard number="500+" label="Enterprise clients" />
-                                <MetricCard number="98%" label="Satisfaction rate" />
-                                <MetricCard number="24/7" label="Support available" />
-                            </div>
+            <section id="metrics" className="py-24 relative">
+                <div className="mx-auto max-w-7xl px-4 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                    <div>
+                        <h3 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+                            Trusted by businesses worldwide
+                        </h3>
+                        <p className="text-lg text-gray-600 dark:text-gray-400 mb-10 leading-relaxed">
+                            FinanceFlow helps teams manage finances effectively, leading to better outcomes and sustainable growth.
+                        </p>
+                        <div className="grid grid-cols-2 gap-6">
+                            <MetricCard number="10k+" label="Active users" />
+                            <MetricCard number="500+" label="Enterprise clients" />
+                            <MetricCard number="98%" label="Satisfaction rate" />
+                            <MetricCard number="24/7" label="Support available" />
                         </div>
-                        <div className="relative">
-                            <div className="w-full h-[480px] rounded-2xl overflow-hidden">
-                                <img
-                                    src="/table-professor.svg"
-                                    alt="Platform statistics"
-                                    className="w-full h-full object-cover"
-                                />
-                            </div>
-                        </div>
+                    </div>
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-200/30 to-teal-200/30 dark:from-emerald-800/20 dark:to-teal-800/20 rounded-3xl blur-3xl" />
+                        {/* <div className={cn(
+                            "relative rounded-3xl overflow-hidden",
+                            "backdrop-blur-xl bg-white/80 dark:bg-gray-900/80",
+                            "border border-gray-200/50 dark:border-gray-700/50",
+                            "shadow-2xl dark:shadow-black/40"
+                        )}> */}
+                        <img
+                            src="/automated-reports2.png"
+                            alt="Platform statistics"
+                            className="w-full h-[420px] object-contain"
+                        />
+                        {/* </div> */}
                     </div>
                 </div>
             </section>
 
             {/* CTA Section */}
-            <section className="py-24 bg-emerald-600 dark:bg-emerald-900">
-                <div className="container mx-auto px-4">
-                    <div className="max-w-3xl mx-auto text-center">
-                        <h2 className="text-3xl font-bold text-white mb-6">
+            <section className="py-24 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-600" />
+                <div className="absolute inset-0">
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-teal-400/30 rounded-full blur-3xl" />
+                    <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-400/30 rounded-full blur-3xl" />
+                </div>
+                <div className="relative mx-auto max-w-7xl px-4">
+                    <div className={cn(
+                        "rounded-3xl p-12 md:p-16 text-center",
+                        "backdrop-blur-xl bg-white/10",
+                        "border border-white/20",
+                        "shadow-2xl"
+                    )}>
+                        <h3 className="text-4xl md:text-5xl font-bold text-white mb-6">
                             Start your free trial today
-                        </h2>
-                        <p className="text-lg text-emerald-100 mb-8">
-                            Join thousands of satisfied users who have transformed their financial management with our platform.
+                        </h3>
+                        <p className="text-emerald-100 text-lg mb-10 max-w-2xl mx-auto leading-relaxed">
+                            Join thousands who have transformed their financial management with FinanceFlow.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <button
-                                onClick={handleStartTrial}
-                                className="px-8 py-4 bg-white text-emerald-600 rounded-lg font-medium transition-colors hover:bg-emerald-50"
+                                onClick={handleStart}
+                                className={cn(
+                                    "rounded-xl px-8 py-4 font-semibold text-base",
+                                    "bg-white text-emerald-700",
+                                    "hover:bg-emerald-50",
+                                    "shadow-xl hover:shadow-2xl",
+                                    "transition-all duration-300 hover:scale-105"
+                                )}
                             >
                                 Start free trial
                             </button>
-                            <button
-                                onClick={handleContactSales}
-                                className="px-8 py-4 border border-white text-white hover:bg-emerald-700 rounded-lg font-medium transition-colors"
+                            <Link
+                                to="/contact-sales"
+                                className={cn(
+                                    "rounded-xl px-8 py-4 font-semibold text-base",
+                                    "border-2 border-white/60 text-white",
+                                    "hover:bg-white/10",
+                                    "transition-all duration-300 hover:scale-105"
+                                )}
                             >
                                 Contact sales
-                            </button>
+                            </Link>
                         </div>
                     </div>
                 </div>
