@@ -12,7 +12,7 @@ import { formatCurrency, formatShortDate } from "@/lib/utils/formatters";
 import { LoanPaymentDialog } from "./loan-payment-dialog";
 import api from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { DollarSign, Send, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 
 interface LoanTableProps {
     loans: Loan[];
@@ -169,10 +169,18 @@ function LoanTableRecords({
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    {formatCurrency(Number(loan.principalAmount) || 0)}
+                                                </div>
+                                                <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                                                    {formatCurrency((Number(loan.principalAmount) || 0) * (1 + ((Number(loan.interestRate) || 0) / 100)))}
+                                                </div>
+                                            </td>
+                                            {/* <td className="px-6 py-4 whitespace-nowrap text-right">
                                                 <div className="text-sm font-bold text-gray-900 dark:text-white">
                                                     {formatCurrency(parseFloat(loan.principalAmount || '0'))}
                                                 </div>
-                                            </td>
+                                            </td> */}
                                             <td className="px-6 py-4 whitespace-nowrap text-right">
                                                 <div className="text-sm font-bold text-orange-600 dark:text-orange-400">
                                                     {formatCurrency(parseFloat(loan.outstandingBalance || '0'))}
@@ -212,7 +220,6 @@ function LoanTableRecords({
                                                             "transition-all duration-200"
                                                         )}
                                                     >
-                                                        <DollarSign className="h-3.5 w-3.5 mr-1.5" />
                                                         Make Payment
                                                     </Button>
                                                 ) : loan.status === 'PENDING' ? (
@@ -228,7 +235,6 @@ function LoanTableRecords({
                                                             "transition-all duration-200"
                                                         )}
                                                     >
-                                                        <Send className="h-3.5 w-3.5 mr-1.5" />
                                                         Disburse Loan
                                                     </Button>
                                                 ) : (

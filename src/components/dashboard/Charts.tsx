@@ -271,7 +271,6 @@ export const DashboardCharts: React.FC = () => {
                         <div className="space-y-4">
                             {metrics.recentTransactions.slice(0, 5).map((transaction) => {
                                 const isIncome = transaction.isLoanPayment;
-                                const isExpense = transaction.isLoanDisbursement || transaction.type === 'EXPENSE';
 
                                 return (
                                     <div

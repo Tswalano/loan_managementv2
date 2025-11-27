@@ -1,5 +1,5 @@
 // src/components/layout/navbar.tsx
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -23,6 +23,7 @@ import {
 import { useState } from 'react';
 import { ThemeToggle } from '../theme-toggle';
 import { clearAuth } from '@/lib/auth';
+import api from '@/lib/api';
 
 const navigation = [
     { name: 'Dashboard', href: '/app', icon: LayoutDashboard },
@@ -32,11 +33,18 @@ const navigation = [
 ];
 
 export default function Navbar() {
+    const navigate = useNavigate();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
     const isActive = (path: string) => location.pathname === path;
 
-    const handleLogout = () => clearAuth();
+    const handleLogout = async () => {
+        await clearAuth();
+        await api.logout()
+
+        navigate('/app/login');
+
+    }
 
     return (
         <nav className="sticky top-0 pt-4 z-50 backdrop-blur-xl shadow-sm">

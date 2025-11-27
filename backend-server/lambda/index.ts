@@ -1248,6 +1248,7 @@ app.post('/loans', authenticate, async (c) => {
         }
 
         const principalAmount = String(body.principalAmount);
+        const amountWithInterest = parseFloat(principalAmount) + (parseFloat(principalAmount) * (parseFloat(String(body.interestRate || 0)) / 100));
 
         const [newLoan] = await db.insert(loans).values({
             organizationId,
@@ -1262,7 +1263,7 @@ app.post('/loans', authenticate, async (c) => {
             status: body.status || 'PENDING',
             disbursementDate: body.disbursementDate ? new Date(body.disbursementDate) : null,
             maturityDate: body.maturityDate ? new Date(body.maturityDate) : null,
-            outstandingBalance: principalAmount,
+            outstandingBalance: String(amountWithInterest),
             totalPaid: '0.00',
             metadata: body.metadata || {},
         }).returning();

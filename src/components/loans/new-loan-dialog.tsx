@@ -23,7 +23,7 @@ const loanSchema = z.object({
     borrowerName: z.string().min(2, "Borrower name is required"),
     fromBalanceId: z.string().min(1, "Bank selection is required"),
     principalAmount: z.number().positive('Amount must be positive'),
-    interestRate: z.number().positive('Interest rate must be positive'),
+    interestRate: z.number().positive('Interest rate must be positive')
 });
 
 type LoanFormData = z.infer<typeof loanSchema>;
