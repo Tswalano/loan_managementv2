@@ -266,7 +266,7 @@ export default function AccountManagementPage() {
         <Card
             onClick={() => setIsCreateDialogOpen(true)}
             className={cn(
-                "relative overflow-hidden h-48",
+                "relative overflow-hidden h-60",
                 "backdrop-blur-xl bg-white/80 dark:bg-gray-900/80",
                 "border-2 border-dashed border-gray-300 dark:border-gray-600",
                 "rounded-2xl shadow-lg dark:shadow-2xl dark:shadow-black/20",
@@ -302,8 +302,8 @@ export default function AccountManagementPage() {
     const balanceOptions = useMemo(() => balances.map((b: Balance) => ({ id: String(b.id ?? ''), label: `${b.accountName} — ${b.accountNumber}`, balance: b.balance })), [balances]);
 
     return (
-        <div className="p-8">
-            <div className="container mx-auto max-w-7xl">
+        <div className="space-y-8">
+            <>
                 {/* Header */}
                 <div className="mb-8 flex items-center justify-between">
                     <div>
@@ -633,7 +633,7 @@ export default function AccountManagementPage() {
                     open={transferOpen}
                     onOpenChange={setTransferOpen}
                 />
-            </div>
+            </>
         </div>
     );
 }

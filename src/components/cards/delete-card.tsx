@@ -1,5 +1,6 @@
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BankCard } from "./bank-card";
 
@@ -24,27 +25,44 @@ export function DeleteAccountDialog({
     balance,
     isDeleting
 }: DeleteAccountDialogProps) {
+    const handleConfirm = async () => {
+        await onConfirm();
+    };
+
     return (
-        <AlertDialog open={open} onOpenChange={onOpenChange}>
-            <AlertDialogContent className={cn(
-                "max-w-md",
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className={cn(
+                "max-w-md p-0 gap-0 overflow-hidden",
                 "backdrop-blur-xl bg-white/95 dark:bg-gray-900/95",
                 "border border-gray-200/50 dark:border-gray-700/50",
                 "shadow-2xl dark:shadow-black/40"
             )}>
-                <AlertDialogHeader className="gap-4">
-                    <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
-                        <AlertCircle className="h-8 w-8 text-white" />
-                    </div>
-                    <AlertDialogTitle className="text-center text-xl font-bold text-red-600 dark:text-red-500">
-                        Delete Account
-                    </AlertDialogTitle>
-                    <AlertDialogDescription className="text-center text-gray-600 dark:text-gray-400">
-                        Are you sure you want to delete this account? This action cannot be undone and all associated data will be permanently removed.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
+                {/* Header Section with Gradient */}
+                <div className="relative bg-gradient-to-br from-red-500 via-red-600 to-red-700 p-6 pb-8">
+                    <button
+                        onClick={() => onOpenChange(false)}
+                        disabled={isDeleting}
+                        className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors disabled:opacity-50"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
 
-                <div className="my-6 p-4 rounded-xl border border-red-200 dark:border-red-800/30 bg-red-50/50 dark:bg-red-900/10">
+                    <div className="flex flex-col items-center gap-3 text-white">
+                        <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                            <AlertCircle className="h-8 w-8" />
+                        </div>
+                        <DialogTitle className="text-2xl font-bold text-center">
+                            Delete Account
+                        </DialogTitle>
+                        <DialogDescription className="text-white/90 text-center max-w-sm">
+                            This action cannot be undone. All associated data will be permanently removed.
+                        </DialogDescription>
+                    </div>
+                </div>
+
+                {/* Content Section */}
+                <div className="p-6 space-y-6">
+
                     <BankCard
                         accountName={accountName}
                         accountNumber={accountNumber}
@@ -52,47 +70,49 @@ export function DeleteAccountDialog({
                         currentBalance={balance}
                         onClick={() => { }}
                     />
-                </div>
 
-                <AlertDialogFooter className="gap-3 sm:gap-3">
-                    <AlertDialogCancel
-                        disabled={isDeleting}
-                        className={cn(
-                            "flex-1 bg-gray-100 dark:bg-gray-800",
-                            "border-gray-300 dark:border-gray-600",
-                            "text-gray-900 dark:text-white",
-                            "hover:bg-gray-200 dark:hover:bg-gray-700",
-                            "transition-all duration-200"
-                        )}
-                    >
-                        Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                        onClick={async (e) => {
-                            e.preventDefault();
-                            await onConfirm();
-                        }}
-                        disabled={isDeleting}
-                        className={cn(
-                            "flex-1 bg-gradient-to-r from-red-600 to-red-700",
-                            "hover:from-red-700 hover:to-red-800",
-                            "text-white shadow-lg hover:shadow-xl",
-                            "transition-all duration-300",
-                            "disabled:opacity-50 disabled:cursor-not-allowed"
-                        )}
-                    >
-                        {isDeleting ? (
-                            <div className="flex items-center gap-2">
-                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                                <span>Deleting...</span>
-                            </div>
-                        ) : (
-                            "Delete Account"
-                        )}
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+                    {/* Action Buttons */}
+                    <div className="flex gap-3">
+                        <Button
+                            variant="outline"
+                            onClick={() => onOpenChange(false)}
+                            disabled={isDeleting}
+                            className={cn(
+                                "flex-1 h-11",
+                                "bg-gray-100 dark:bg-gray-800",
+                                "border-2 border-gray-300 dark:border-gray-600",
+                                "text-gray-900 dark:text-white font-semibold",
+                                "hover:bg-gray-200 dark:hover:bg-gray-700",
+                                "transition-all duration-200"
+                            )}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleConfirm}
+                            disabled={isDeleting}
+                            className={cn(
+                                "flex-1 h-11 font-semibold",
+                                "bg-gradient-to-r from-red-600 to-red-700",
+                                "hover:from-red-700 hover:to-red-800",
+                                "text-white shadow-lg hover:shadow-xl",
+                                "transition-all duration-300",
+                                "disabled:opacity-50 disabled:cursor-not-allowed"
+                            )}
+                        >
+                            {isDeleting ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                    <span>Deleting...</span>
+                                </div>
+                            ) : (
+                                "Delete Account"
+                            )}
+                        </Button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
     );
 }
 

@@ -130,7 +130,7 @@ export default function TransactionsPage() {
     console.log("Rendering TransactionsPage:", currentTransactions);
 
     const EmptyState = () => (
-        <div className="p-8 min-h-screen">
+        <div className="space-y-8">
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
@@ -198,7 +198,7 @@ export default function TransactionsPage() {
     }
 
     return (
-        <div className="p-8 space-y-8">
+        <div className="space-y-8">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>

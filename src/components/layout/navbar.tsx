@@ -29,6 +29,7 @@ const navigation = [
     { name: 'Dashboard', href: '/app', icon: LayoutDashboard },
     { name: 'Loans', href: '/app/loans', icon: PiggyBank },
     { name: 'Transactions', href: '/app/transactions', icon: Receipt },
+    { name: 'Stokvel', href: '/app/stokvel', icon: Receipt },
     { name: 'Bank Accounts', href: '/app/bank-accounts', icon: Banknote },
 ];
 
