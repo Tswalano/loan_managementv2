@@ -112,6 +112,17 @@ export interface TransferRequest {
     description?: string;
 }
 
+export interface UpdateProfileRequest {
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string;
+}
+
+export interface ChangePasswordRequest {
+    currentPassword: string;
+    newPassword: string;
+}
+
 // Response types
 export interface AuthResponse {
     success: boolean;
@@ -225,6 +236,26 @@ class FinanceAPI {
     async getCurrentUser(): Promise<ApiResponse<{ user: User; organizations: any[] }>> {
         const res = await fetch(`${this.baseUrl}/me`, {
             headers: getAuthHeaders(),
+        });
+        return handleResponse(res);
+    }
+
+    async updateProfile(data: UpdateProfileRequest): Promise<ApiResponse<{ user: User }>> {
+        const res = await fetch(`${this.baseUrl}/me`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data),
+        });
+        const result = await handleResponse<ApiResponse<{ user: User }>>(res);
+        this.invalidateQueries([['currentUser']]);
+        return result;
+    }
+
+    async changePassword(data: ChangePasswordRequest): Promise<ApiResponse> {
+        const res = await fetch(`${this.baseUrl}/me/password`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data),
         });
         return handleResponse(res);
     }

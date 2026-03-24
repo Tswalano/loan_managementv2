@@ -401,7 +401,7 @@ export default function AccountManagementPage() {
                                     onValueChange={(value: BankKey) =>
                                         setFormData({ ...formData, bankName: value })}
                                 >
-                                    <SelectTrigger className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 h-11">
+                                    <SelectTrigger className="h-11 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 dark:focus:ring-[#C4F546] text-gray-900 dark:text-white">
                                         <SelectValue placeholder="Select your bank" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
@@ -422,7 +422,7 @@ export default function AccountManagementPage() {
                                     placeholder="e.g., Main Savings Account"
                                     value={formData.accountName}
                                     onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
-                                    className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 h-11"
+                                    className="h-11 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                                 />
                             </div>
 
@@ -435,7 +435,7 @@ export default function AccountManagementPage() {
                                     placeholder="0.00"
                                     value={formData.initialBalance}
                                     onChange={(e) => setFormData({ ...formData, initialBalance: parseFloat(e.target.value) || 0 })}
-                                    className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 h-11"
+                                    className="h-11 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white"
                                 />
                             </div>
 

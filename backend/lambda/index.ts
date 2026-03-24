@@ -471,6 +471,75 @@ app.get('/me', authenticate, async (c) => {
     }
 });
 
+/**
+ * @route PUT /me
+ * @description Update current user profile
+ * @access Private
+ */
+app.put('/me', authenticate, async (c) => {
+    const userId = c.get('userId');
+    try {
+        const body = await c.req.json();
+        const { firstName, lastName, phoneNumber } = body;
+
+        const [updated] = await db
+            .update(users)
+            .set({
+                ...(firstName !== undefined && { firstName }),
+                ...(lastName !== undefined && { lastName }),
+                ...(phoneNumber !== undefined && { phoneNumber }),
+                updatedAt: new Date(),
+            })
+            .where(eq(users.id, userId))
+            .returning({
+                id: users.id,
+                email: users.email,
+                firstName: users.firstName,
+                lastName: users.lastName,
+                phoneNumber: users.phoneNumber,
+            });
+
+        if (!updated) return c.json({ error: 'User not found' }, 404);
+
+        return c.json({ success: true, user: updated });
+    } catch (err) {
+        return c.json({ error: err instanceof Error ? err.message : 'An error occurred' }, 500);
+    }
+});
+
+/**
+ * @route PUT /me/password
+ * @description Change current user password
+ * @access Private
+ */
+app.put('/me/password', authenticate, async (c) => {
+    const userId = c.get('userId');
+    try {
+        const body = await c.req.json();
+        const { currentPassword, newPassword } = body;
+
+        if (!currentPassword || !newPassword) {
+            return c.json({ error: 'Current and new password are required' }, 400);
+        }
+        if (newPassword.length < 8) {
+            return c.json({ error: 'New password must be at least 8 characters' }, 400);
+        }
+
+        const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
+        if (!user) return c.json({ error: 'User not found' }, 404);
+
+        const valid = await verifyPassword(currentPassword, user.passwordHash);
+        if (!valid) return c.json({ error: 'Current password is incorrect' }, 400);
+
+        const newHash = await hashPassword(newPassword);
+        await db.update(users).set({ passwordHash: newHash, updatedAt: new Date() }).where(eq(users.id, userId));
+
+        return c.json({ success: true, message: 'Password updated successfully' });
+    } catch (err) {
+        return c.json({ error: err instanceof Error ? err.message : 'An error occurred' }, 500);
+    }
+});
+
 // ============================================
 // ORGANIZATION ROUTES
 // ============================================

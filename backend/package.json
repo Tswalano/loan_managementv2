@@ -18,7 +18,8 @@
     "generate": "drizzle-kit generate",
     "migrate": "tsx db/migrate.ts",
     "migrate:fresh": "tsx db/migrate.ts --fresh",
-    "drop": "drizzle-kit drop"
+    "drop": "drizzle-kit drop",
+    "seed": "tsx db/seed.ts"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.147",

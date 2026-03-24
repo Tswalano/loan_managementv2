@@ -41,7 +41,7 @@ export const maskAccountLast8Grouped = (account: string): string => {
     const last8 = clean.slice(-8);
     const last8Groups = last8.match(/.{1,4}/g) || [];
 
-    const maskedGroups = Math.ceil((clean.length - 8) / 4);
+    const maskedGroups = Math.max(0, Math.ceil((clean.length - 8) / 4));
     const groups = Array(maskedGroups).fill("****");
 
     return [...groups, ...last8Groups].join(" ");

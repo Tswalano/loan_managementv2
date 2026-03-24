@@ -17,9 +17,10 @@ interface ViewTransactionDialogProps {
     transaction: Transaction | null;
     open: boolean;
     onClose: () => void;
+    onViewLoan?: (loanId: string) => void;
 }
 
-const ViewTransactionDialog = ({ transaction, open, onClose }: ViewTransactionDialogProps) => {
+const ViewTransactionDialog = ({ transaction, open, onClose, onViewLoan }: ViewTransactionDialogProps) => {
     if (!transaction) return null;
 
     const isIncome = transaction.type === 'INCOME' || transaction.type === 'LOAN_PAYMENT';
@@ -125,7 +126,7 @@ const ViewTransactionDialog = ({ transaction, open, onClose }: ViewTransactionDi
                                     <Button
                                         variant="link"
                                         className="p-0 h-auto text-base font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
-                                        onClick={() => {/* Handle loan navigation */ }}
+                                        onClick={() => onViewLoan?.(transaction.loanId!)}
                                     >
                                         View Loan Details →
                                     </Button>
@@ -162,11 +163,11 @@ const ViewTransactionDialog = ({ transaction, open, onClose }: ViewTransactionDi
                 </div>
 
                 <DialogFooter className="gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-                    {transaction.type === 'LOAN_DISBURSEMENT' && (
+                    {transaction.loanId && (
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {/* Handle viewing loan details */ }}
+                            onClick={() => onViewLoan?.(transaction.loanId!)}
                             className={cn(
                                 "bg-emerald-50 dark:bg-emerald-900/20",
                                 "border-emerald-200 dark:border-emerald-800/30",

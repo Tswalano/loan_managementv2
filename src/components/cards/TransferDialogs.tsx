@@ -4,6 +4,7 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
@@ -123,12 +124,14 @@ export const LoadFundsDialog: React.FC<LoadFundsDialogProps> = ({ open, onOpenCh
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className={cn(
+                "sm:max-w-[500px]",
+                "backdrop-blur-xl bg-white/95 dark:bg-gray-900/95",
+                "border border-gray-200/50 dark:border-gray-700/50",
+                "shadow-2xl dark:shadow-black/40"
+            )}>
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-3 text-gray-900 dark:text-white">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
-                            <ArrowDownToLine className="w-5 h-5 text-white" />
-                        </div>
+                    <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                         Load Funds
                     </DialogTitle>
                     <DialogDescription className="text-gray-600 dark:text-gray-400">
@@ -136,22 +139,22 @@ export const LoadFundsDialog: React.FC<LoadFundsDialogProps> = ({ open, onOpenCh
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-5 mt-4">
+                <form onSubmit={handleSubmit} className="space-y-5 mt-2">
                     {/* Account Selection */}
                     <div className="space-y-2">
-                        <Label htmlFor="load-account" className="text-sm font-medium">
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Destination Account *
                         </Label>
                         <Select
                             value={formData.toBalanceId}
                             onValueChange={(value) => setFormData({ ...formData, toBalanceId: value })}
                         >
-                            <SelectTrigger id="load-account" className="h-11">
+                            <SelectTrigger className="h-11 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 dark:focus:ring-[#C4F546] text-gray-900 dark:text-white">
                                 <SelectValue placeholder="Select account" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
                                 {activeAccounts.map((account: Balance) => (
-                                    <SelectItem key={account.id} value={account.id}>
+                                    <SelectItem key={account.id} value={account.id} className="focus:bg-gray-100 dark:focus:bg-gray-800">
                                         <div className="flex items-center gap-2">
                                             {account.type === 'BANK' ? (
                                                 <Building2 className="w-4 h-4 text-blue-500" />
@@ -160,7 +163,7 @@ export const LoadFundsDialog: React.FC<LoadFundsDialogProps> = ({ open, onOpenCh
                                             )}
                                             <div className="flex flex-col">
                                                 <span className="font-medium text-sm">{getAccountName(account)}</span>
-                                                <span className="text-xs text-gray-500">
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">
                                                     {formatCurrency(parseFloat(account.balance))}
                                                 </span>
                                             </div>
@@ -174,84 +177,75 @@ export const LoadFundsDialog: React.FC<LoadFundsDialogProps> = ({ open, onOpenCh
                     {/* Current Balance Display */}
                     {selectedAccount && (
                         <div className={cn(
-                            "p-3 rounded-lg border-2",
-                            "bg-gradient-to-br from-gray-50 to-gray-100",
-                            "dark:from-gray-800 dark:to-gray-900",
-                            "border-gray-200 dark:border-gray-700"
+                            "p-4 rounded-xl",
+                            "bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-700/20",
+                            "border border-gray-200 dark:border-gray-700/50"
                         )}>
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                        Current Balance
-                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Current Balance</p>
                                     <p className="text-xl font-bold text-gray-900 dark:text-white">
                                         {formatCurrency(parseFloat(selectedAccount.balance))}
                                     </p>
                                 </div>
-                                <CreditCard className="w-10 h-10 text-gray-400" />
+                                <CreditCard className="w-8 h-8 text-gray-300 dark:text-gray-600" />
                             </div>
                         </div>
                     )}
 
                     {/* Amount */}
                     <div className="space-y-2">
-                        <Label htmlFor="load-amount" className="text-sm font-medium">
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Amount to Load *
                         </Label>
                         <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm">
-                                R
-                            </span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500">R</span>
                             <Input
-                                id="load-amount"
                                 type="number"
                                 step="0.01"
                                 placeholder="0.00"
                                 value={formData.amount}
                                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                                className="pl-7 h-11 text-base font-medium"
+                                className="pl-7 h-11 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white"
                             />
                         </div>
                     </div>
 
                     {/* Category */}
                     <div className="space-y-2">
-                        <Label htmlFor="load-category" className="text-sm font-medium">
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Category
                         </Label>
                         <Input
-                            id="load-category"
                             type="text"
                             placeholder="e.g., Fund Loading, Deposit"
                             value={formData.category}
                             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                            className="h-11"
+                            className="h-11 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                         />
                     </div>
 
                     {/* Description */}
                     <div className="space-y-2">
-                        <Label htmlFor="load-description" className="text-sm font-medium">
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Description (Optional)
                         </Label>
                         <Input
-                            id="load-description"
                             type="text"
                             placeholder="Add a note"
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            className="h-11"
+                            className="h-11 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                         />
                     </div>
 
-                    {/* Submit Button */}
-                    <div className="flex gap-3 pt-4">
+                    <DialogFooter className="gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                         <Button
                             type="button"
                             variant="outline"
                             onClick={() => onOpenChange(false)}
-                            className="flex-1 h-11"
                             disabled={isLoading}
+                            className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
                         >
                             Cancel
                         </Button>
@@ -259,10 +253,10 @@ export const LoadFundsDialog: React.FC<LoadFundsDialogProps> = ({ open, onOpenCh
                             type="submit"
                             disabled={isLoading || success}
                             className={cn(
-                                "flex-1 h-11 font-semibold transition-all duration-300",
+                                "font-semibold text-white shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed",
                                 success
-                                    ? "bg-gradient-to-r from-emerald-500 to-emerald-600"
-                                    : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                                    ? "bg-gradient-to-r from-emerald-600 to-emerald-700"
+                                    : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                             )}
                         >
                             {isLoading ? (
@@ -282,7 +276,7 @@ export const LoadFundsDialog: React.FC<LoadFundsDialogProps> = ({ open, onOpenCh
                                 </>
                             )}
                         </Button>
-                    </div>
+                    </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>
@@ -405,12 +399,14 @@ export const TransferDialog: React.FC<TransferDialogProps> = ({ open, onOpenChan
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className={cn(
+                "sm:max-w-[500px]",
+                "backdrop-blur-xl bg-white/95 dark:bg-gray-900/95",
+                "border border-gray-200/50 dark:border-gray-700/50",
+                "shadow-2xl dark:shadow-black/40"
+            )}>
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-3 text-gray-900 dark:text-white">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
-                            <ArrowRightLeft className="w-5 h-5 text-white" />
-                        </div>
+                    <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                         Transfer Funds
                     </DialogTitle>
                     <DialogDescription className="text-gray-600 dark:text-gray-400">
@@ -418,22 +414,22 @@ export const TransferDialog: React.FC<TransferDialogProps> = ({ open, onOpenChan
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-5 mt-4">
+                <form onSubmit={handleSubmit} className="space-y-5 mt-2">
                     {/* From Account */}
                     <div className="space-y-2">
-                        <Label htmlFor="from-account" className="text-sm font-medium">
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             From Account *
                         </Label>
                         <Select
                             value={formData.fromBalanceId}
                             onValueChange={(value) => setFormData({ ...formData, fromBalanceId: value })}
                         >
-                            <SelectTrigger id="from-account" className="h-11">
+                            <SelectTrigger className="h-11 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 dark:focus:ring-[#C4F546] text-gray-900 dark:text-white">
                                 <SelectValue placeholder="Select source account" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
                                 {activeAccounts.map((account: Balance) => (
-                                    <SelectItem key={account.id} value={account.id}>
+                                    <SelectItem key={account.id} value={account.id} className="focus:bg-gray-100 dark:focus:bg-gray-800">
                                         <div className="flex items-center gap-2">
                                             {account.type === 'BANK' ? (
                                                 <Building2 className="w-4 h-4 text-blue-500" />
@@ -442,7 +438,7 @@ export const TransferDialog: React.FC<TransferDialogProps> = ({ open, onOpenChan
                                             )}
                                             <div className="flex flex-col">
                                                 <span className="font-medium text-sm">{getAccountName(account)}</span>
-                                                <span className="text-xs text-gray-500">
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">
                                                     {formatCurrency(parseFloat(account.balance))}
                                                 </span>
                                             </div>
@@ -456,49 +452,46 @@ export const TransferDialog: React.FC<TransferDialogProps> = ({ open, onOpenChan
                     {/* Source Balance */}
                     {fromAccount && (
                         <div className={cn(
-                            "p-3 rounded-lg border-2",
-                            "bg-gradient-to-br from-red-50 to-orange-50",
-                            "dark:from-red-900/20 dark:to-orange-900/20",
-                            "border-red-200 dark:border-red-800"
+                            "p-4 rounded-xl",
+                            "bg-gradient-to-br from-orange-50 to-red-50/50 dark:from-red-900/20 dark:to-orange-900/10",
+                            "border border-orange-200 dark:border-red-800/40"
                         )}>
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                        Available Balance
-                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Available Balance</p>
                                     <p className="text-xl font-bold text-gray-900 dark:text-white">
                                         {formatCurrency(parseFloat(fromAccount.balance))}
                                     </p>
                                 </div>
-                                <ArrowRightLeft className="w-10 h-10 text-red-400" />
+                                <ArrowRightLeft className="w-7 h-7 text-orange-300 dark:text-red-700" />
                             </div>
                         </div>
                     )}
 
                     {/* Transfer Arrow */}
                     <div className="flex justify-center">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
-                            <ArrowRightLeft className="w-4 h-4 text-white" />
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow">
+                            <ArrowRightLeft className="w-3.5 h-3.5 text-white" />
                         </div>
                     </div>
 
                     {/* To Account */}
                     <div className="space-y-2">
-                        <Label htmlFor="to-account" className="text-sm font-medium">
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             To Account *
                         </Label>
                         <Select
                             value={formData.toBalanceId}
                             onValueChange={(value) => setFormData({ ...formData, toBalanceId: value })}
                         >
-                            <SelectTrigger id="to-account" className="h-11">
+                            <SelectTrigger className="h-11 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 dark:focus:ring-[#C4F546] text-gray-900 dark:text-white">
                                 <SelectValue placeholder="Select destination account" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
                                 {activeAccounts
                                     .filter((a: Balance) => a.id !== formData.fromBalanceId)
                                     .map((account: Balance) => (
-                                        <SelectItem key={account.id} value={account.id}>
+                                        <SelectItem key={account.id} value={account.id} className="focus:bg-gray-100 dark:focus:bg-gray-800">
                                             <div className="flex items-center gap-2">
                                                 {account.type === 'BANK' ? (
                                                     <Building2 className="w-4 h-4 text-blue-500" />
@@ -507,7 +500,7 @@ export const TransferDialog: React.FC<TransferDialogProps> = ({ open, onOpenChan
                                                 )}
                                                 <div className="flex flex-col">
                                                     <span className="font-medium text-sm">{getAccountName(account)}</span>
-                                                    <span className="text-xs text-gray-500">
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
                                                         {formatCurrency(parseFloat(account.balance))}
                                                     </span>
                                                 </div>
@@ -521,69 +514,61 @@ export const TransferDialog: React.FC<TransferDialogProps> = ({ open, onOpenChan
                     {/* Destination Balance */}
                     {toAccount && (
                         <div className={cn(
-                            "p-3 rounded-lg border-2",
-                            "bg-gradient-to-br from-emerald-50 to-green-50",
-                            "dark:from-emerald-900/20 dark:to-green-900/20",
-                            "border-emerald-200 dark:border-emerald-800"
+                            "p-4 rounded-xl",
+                            "bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-800/10",
+                            "border border-emerald-200 dark:border-emerald-800/30"
                         )}>
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                        Current Balance
-                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Current Balance</p>
                                     <p className="text-xl font-bold text-gray-900 dark:text-white">
                                         {formatCurrency(parseFloat(toAccount.balance))}
                                     </p>
                                 </div>
-                                <CreditCard className="w-10 h-10 text-emerald-400" />
+                                <CreditCard className="w-7 h-7 text-emerald-300 dark:text-emerald-700" />
                             </div>
                         </div>
                     )}
 
                     {/* Amount */}
                     <div className="space-y-2">
-                        <Label htmlFor="transfer-amount" className="text-sm font-medium">
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Amount to Transfer *
                         </Label>
                         <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm">
-                                R
-                            </span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500">R</span>
                             <Input
-                                id="transfer-amount"
                                 type="number"
                                 step="0.01"
                                 placeholder="0.00"
                                 value={formData.amount}
                                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                                className="pl-7 h-11 text-base font-medium"
+                                className="pl-7 h-11 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white"
                             />
                         </div>
                     </div>
 
                     {/* Description */}
                     <div className="space-y-2">
-                        <Label htmlFor="transfer-description" className="text-sm font-medium">
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Description (Optional)
                         </Label>
                         <Input
-                            id="transfer-description"
                             type="text"
                             placeholder="Add a note"
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            className="h-11"
+                            className="h-11 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                         />
                     </div>
 
-                    {/* Submit Buttons */}
-                    <div className="flex gap-3 pt-4">
+                    <DialogFooter className="gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                         <Button
                             type="button"
                             variant="outline"
                             onClick={() => onOpenChange(false)}
-                            className="flex-1 h-11"
                             disabled={isLoading}
+                            className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
                         >
                             Cancel
                         </Button>
@@ -591,10 +576,10 @@ export const TransferDialog: React.FC<TransferDialogProps> = ({ open, onOpenChan
                             type="submit"
                             disabled={isLoading || success}
                             className={cn(
-                                "flex-1 h-11 font-semibold transition-all duration-300",
+                                "font-semibold text-white shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed",
                                 success
-                                    ? "bg-gradient-to-r from-emerald-500 to-emerald-600"
-                                    : "bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700"
+                                    ? "bg-gradient-to-r from-emerald-600 to-emerald-700"
+                                    : "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
                             )}
                         >
                             {isLoading ? (
@@ -614,7 +599,7 @@ export const TransferDialog: React.FC<TransferDialogProps> = ({ open, onOpenChan
                                 </>
                             )}
                         </Button>
-                    </div>
+                    </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>

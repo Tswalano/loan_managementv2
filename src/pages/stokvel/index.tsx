@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     Users,
@@ -16,6 +17,7 @@ import {
     Wallet,
     Eye,
 } from 'lucide-react';
+import { MetricCard } from '@/components/dashboard/MetricCard';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils/formatters';
 import { toast } from '@/hooks/use-toast';
@@ -176,77 +178,26 @@ const StokvelsPage: React.FC = () => {
 
             {/* Stats Overview */}
             <div className="grid gap-6 md:grid-cols-4 mb-8">
-                <Card className="border-l-4 border-l-emerald-500">
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                    Total Groups
-                                </p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                    {stokvels.length}
-                                </p>
-                            </div>
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
-                                <Users className="w-6 h-6 text-white" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-blue-500">
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                    Total Members
-                                </p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                    {stokvels.reduce((sum, s) => sum + s.members.length, 0)}
-                                </p>
-                            </div>
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                                <UserPlus className="w-6 h-6 text-white" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-purple-500">
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                    Total Collected
-                                </p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                    {formatCurrency(stokvels.reduce((sum, s) => sum + s.totalCollected, 0))}
-                                </p>
-                            </div>
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
-                                <TrendingUp className="w-6 h-6 text-white" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-orange-500">
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                    Active Groups
-                                </p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                    {stokvels.filter(s => s.status === 'active').length}
-                                </p>
-                            </div>
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
-                                <Wallet className="w-6 h-6 text-white" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <MetricCard
+                    title="Total Groups"
+                    value={stokvels.length}
+                    icon={<Users className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />}
+                />
+                <MetricCard
+                    title="Total Members"
+                    value={stokvels.reduce((sum, s) => sum + s.members.length, 0)}
+                    icon={<UserPlus className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
+                />
+                <MetricCard
+                    title="Total Collected"
+                    value={formatCurrency(stokvels.reduce((sum, s) => sum + s.totalCollected, 0))}
+                    icon={<TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />}
+                />
+                <MetricCard
+                    title="Active Groups"
+                    value={stokvels.filter(s => s.status === 'active').length}
+                    icon={<Wallet className="w-5 h-5 text-orange-600 dark:text-orange-400" />}
+                />
             </div>
 
             {/* Stokvels List */}
@@ -399,106 +350,117 @@ const StokvelCard: React.FC<StokvelCardProps> = ({
 
     return (
         <Card className={cn(
-            "hover:shadow-lg transition-shadow cursor-pointer",
-            "border-2",
-            stokvel.status === 'active' && "border-emerald-200 dark:border-emerald-800"
+            "relative overflow-hidden backdrop-blur-xl",
+            "bg-white/80 dark:bg-gray-900/80",
+            "border border-gray-200/50 dark:border-gray-700/50",
+            "rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/20",
+            "p-6 hover:shadow-2xl dark:hover:shadow-black/40",
+            "transition-all duration-300 hover:-translate-y-1",
+            "group cursor-pointer"
         )}>
-            <CardHeader>
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-gray-100/20 dark:to-gray-800/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+            {/* Decorative blur circle */}
+            <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-gradient-to-br from-[#C4F546]/10 to-transparent dark:from-[#C4F546]/5 rounded-full blur-2xl" />
+
+            <div className="relative z-10 space-y-4">
+                {/* Header */}
                 <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                        <CardTitle className="text-xl mb-2">{stokvel.name}</CardTitle>
-                        <CardDescription className="line-clamp-2">
-                            {stokvel.description}
-                        </CardDescription>
+                    <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-xl flex items-center justify-center shadow-inner">
+                            <Users className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                            <h3 className="text-base font-bold bg-gradient-to-br from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent leading-tight">
+                                {stokvel.name}
+                            </h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">
+                                {stokvel.description}
+                            </p>
+                        </div>
                     </div>
                     <Badge
                         className={cn(
-                            stokvel.status === 'active' && "bg-emerald-500",
-                            stokvel.status === 'paused' && "bg-orange-500",
-                            stokvel.status === 'completed' && "bg-blue-500"
+                            "text-xs font-semibold shrink-0",
+                            stokvel.status === 'active' && "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-0",
+                            stokvel.status === 'paused' && "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-0",
+                            stokvel.status === 'completed' && "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-0"
                         )}
                     >
                         {stokvel.status}
                     </Badge>
                 </div>
-            </CardHeader>
 
-            <CardContent className="space-y-4">
                 {/* Stats */}
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                            Contribution
-                        </p>
-                        <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <div className="space-y-0.5">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Contribution</p>
+                        <p className="text-lg font-bold bg-gradient-to-br from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                             {formatCurrency(stokvel.contributionAmount)}
                         </p>
-                        <p className="text-xs text-gray-500 capitalize">
-                            {stokvel.frequency}
-                        </p>
+                        <p className="text-xs text-gray-500 capitalize">{stokvel.frequency}</p>
                     </div>
-                    <div className="space-y-1">
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                            Total Collected
-                        </p>
-                        <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <div className="space-y-0.5">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Total Collected</p>
+                        <p className="text-lg font-bold bg-gradient-to-br from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                             {formatCurrency(stokvel.totalCollected)}
                         </p>
-                        <p className="text-xs text-gray-500">
-                            {stokvel.members.length} members
-                        </p>
+                        <p className="text-xs text-gray-500">{stokvel.members.length} members</p>
                     </div>
                 </div>
 
                 {/* Progress Bar */}
                 {stokvel.targetAmount && (
-                    <div className="space-y-2">
-                        <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
+                    <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                             <span>Progress</span>
-                            <span>{progress.toFixed(0)}%</span>
+                            <span className="font-medium">{progress.toFixed(0)}%</span>
                         </div>
-                        <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                             <div
                                 className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-300"
                                 style={{ width: `${Math.min(progress, 100)}%` }}
                             />
                         </div>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                             Target: {formatCurrency(stokvel.targetAmount)}
                         </p>
                     </div>
                 )}
 
                 {/* Actions */}
-                <div className="grid grid-cols-3 gap-2 pt-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onViewDetails}
-                        className="text-xs"
-                    >
-                        <Eye className="w-3 h-3 mr-1" />
-                        View
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onAddMember}
-                        className="text-xs"
-                    >
-                        <UserPlus className="w-3 h-3 mr-1" />
-                        Member
-                    </Button>
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100/60 dark:border-gray-700/40">
+                    <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={onViewDetails}
+                            className="h-8 px-3 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-gray-800/60"
+                        >
+                            <Eye className="w-3.5 h-3.5 mr-1.5" />
+                            View
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={onAddMember}
+                            className="h-8 px-3 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-gray-800/60"
+                        >
+                            <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+                            Member
+                        </Button>
+                    </div>
                     <Button
                         size="sm"
                         onClick={onRecordPayment}
-                        className="text-xs bg-emerald-500 hover:bg-emerald-600"
+                        className="h-8 px-3 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg"
                     >
-                        <DollarSign className="w-3 h-3 mr-1" />
+                        <DollarSign className="w-3.5 h-3.5 mr-1.5" />
                         Pay
                     </Button>
                 </div>
-            </CardContent>
+            </div>
         </Card>
     );
 };
@@ -556,108 +518,121 @@ const CreateStokvelDialog: React.FC<CreateStokvelDialogProps> = ({ open, onOpenC
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[550px]">
+            <DialogContent className={cn(
+                "sm:max-w-[550px]",
+                "backdrop-blur-xl bg-white/95 dark:bg-gray-900/95",
+                "border border-gray-200/50 dark:border-gray-700/50",
+                "shadow-2xl dark:shadow-black/40"
+            )}>
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
-                            <Users className="w-5 h-5 text-white" />
-                        </div>
+                    <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                         Create New Stokvel
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="text-gray-600 dark:text-gray-400">
                         Set up a new savings group and start collecting contributions
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                <form onSubmit={handleSubmit} className="space-y-5 mt-2">
                     <div className="space-y-2">
-                        <Label htmlFor="name">Stokvel Name *</Label>
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Stokvel Name *</Label>
                         <Input
-                            id="name"
                             placeholder="e.g., Family Savings Circle"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                         />
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="description">Description</Label>
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</Label>
                         <Input
-                            id="description"
                             placeholder="Brief description of the stokvel purpose"
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                         />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="contribution">Contribution Amount *</Label>
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Contribution Amount *</Label>
                             <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R</span>
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500">R</span>
                                 <Input
-                                    id="contribution"
                                     type="number"
                                     step="0.01"
                                     placeholder="1000.00"
                                     value={formData.contributionAmount}
                                     onChange={(e) => setFormData({ ...formData, contributionAmount: e.target.value })}
-                                    className="pl-7"
+                                    className="pl-7 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white"
                                 />
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="frequency">Frequency *</Label>
-                            <select
-                                id="frequency"
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Frequency *</Label>
+                            <Select
                                 value={formData.frequency}
-                                onChange={(e) => setFormData({ ...formData, frequency: e.target.value as any })}
-                                className="w-full h-10 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                                onValueChange={(v) => setFormData({ ...formData, frequency: v as any })}
                             >
-                                <option value="weekly">Weekly</option>
-                                <option value="monthly">Monthly</option>
-                                <option value="quarterly">Quarterly</option>
-                            </select>
+                                <SelectTrigger className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 dark:focus:ring-[#C4F546] text-gray-900 dark:text-white">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                                    <SelectGroup>
+                                        <SelectItem value="weekly">Weekly</SelectItem>
+                                        <SelectItem value="monthly">Monthly</SelectItem>
+                                        <SelectItem value="quarterly">Quarterly</SelectItem>
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="startDate">Start Date</Label>
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</Label>
                             <Input
-                                id="startDate"
                                 type="date"
                                 value={formData.startDate}
                                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                                className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white"
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="targetAmount">Target Amount (Optional)</Label>
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Target Amount (Optional)</Label>
                             <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R</span>
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500">R</span>
                                 <Input
-                                    id="targetAmount"
                                     type="number"
                                     step="0.01"
                                     placeholder="50000.00"
                                     value={formData.targetAmount}
                                     onChange={(e) => setFormData({ ...formData, targetAmount: e.target.value })}
-                                    className="pl-7"
+                                    className="pl-7 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white"
                                 />
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex gap-3 pt-4">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+                    <DialogFooter className="gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => onOpenChange(false)}
+                            className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
+                        >
                             Cancel
                         </Button>
-                        <Button type="submit" className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600">
+                        <Button
+                            type="submit"
+                            className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                        >
                             Create Stokvel
                         </Button>
-                    </div>
+                    </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>
@@ -698,70 +673,81 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({ open, onOpenChange, s
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[450px]">
+            <DialogContent className={cn(
+                "sm:max-w-[450px]",
+                "backdrop-blur-xl bg-white/95 dark:bg-gray-900/95",
+                "border border-gray-200/50 dark:border-gray-700/50",
+                "shadow-2xl dark:shadow-black/40"
+            )}>
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                            <UserPlus className="w-5 h-5 text-white" />
-                        </div>
+                    <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                         Add Member
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="text-gray-600 dark:text-gray-400">
                         Add a new member to {stokvel?.name}
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                <form onSubmit={handleSubmit} className="space-y-5 mt-2">
                     <div className="space-y-2">
-                        <Label htmlFor="memberName">Full Name *</Label>
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Full Name *</Label>
                         <Input
-                            id="memberName"
                             placeholder="John Doe"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="email">Email (Optional)</Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            placeholder="john@example.com"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email (Optional)</Label>
+                            <Input
+                                type="email"
+                                placeholder="john@example.com"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone (Optional)</Label>
+                            <Input
+                                type="tel"
+                                placeholder="0821234567"
+                                value={formData.phone}
+                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                            />
+                        </div>
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="phone">Phone (Optional)</Label>
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Join Date</Label>
                         <Input
-                            id="phone"
-                            type="tel"
-                            placeholder="0821234567"
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="joinedDate">Join Date</Label>
-                        <Input
-                            id="joinedDate"
                             type="date"
                             value={formData.joinedDate}
                             onChange={(e) => setFormData({ ...formData, joinedDate: e.target.value })}
+                            className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white"
                         />
                     </div>
 
-                    <div className="flex gap-3 pt-4">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+                    <DialogFooter className="gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => onOpenChange(false)}
+                            className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
+                        >
                             Cancel
                         </Button>
-                        <Button type="submit" className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600">
+                        <Button
+                            type="submit"
+                            className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                        >
                             Add Member
                         </Button>
-                    </div>
+                    </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>
@@ -816,93 +802,105 @@ const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({ open, onOpenC
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[450px]">
+            <DialogContent className={cn(
+                "sm:max-w-[450px]",
+                "backdrop-blur-xl bg-white/95 dark:bg-gray-900/95",
+                "border border-gray-200/50 dark:border-gray-700/50",
+                "shadow-2xl dark:shadow-black/40"
+            )}>
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
-                            <DollarSign className="w-5 h-5 text-white" />
-                        </div>
+                    <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                         Record Payment
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="text-gray-600 dark:text-gray-400">
                         Record a contribution for {stokvel?.name}
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                <form onSubmit={handleSubmit} className="space-y-5 mt-2">
                     <div className="space-y-2">
-                        <Label htmlFor="member">Member *</Label>
-                        <select
-                            id="member"
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Member *</Label>
+                        <Select
                             value={formData.memberId}
-                            onChange={(e) => setFormData({ ...formData, memberId: e.target.value })}
-                            className="w-full h-10 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                            onValueChange={(v) => setFormData({ ...formData, memberId: v })}
                         >
-                            <option value="">Select member</option>
-                            {stokvel?.members.map((member) => (
-                                <option key={member.id} value={member.id}>
-                                    {member.name}
-                                </option>
-                            ))}
-                        </select>
+                            <SelectTrigger className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 dark:focus:ring-[#C4F546] text-gray-900 dark:text-white">
+                                <SelectValue placeholder="Select member" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                                <SelectGroup>
+                                    {stokvel?.members.map((member) => (
+                                        <SelectItem key={member.id} value={member.id} className="focus:bg-gray-100 dark:focus:bg-gray-800">
+                                            {member.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="amount">Amount *</Label>
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Amount *</Label>
                         <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500">R</span>
                             <Input
-                                id="amount"
                                 type="number"
                                 step="0.01"
                                 placeholder={stokvel?.contributionAmount.toString()}
                                 value={formData.amount}
                                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                                className="pl-7"
+                                className="pl-7 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white"
                             />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="date">Payment Date</Label>
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Date</Label>
                             <Input
-                                id="date"
                                 type="date"
                                 value={formData.date}
                                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white"
                             />
                         </div>
-
                         <div className="space-y-2">
-                            <Label htmlFor="period">Period</Label>
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Period</Label>
                             <Input
-                                id="period"
                                 placeholder="November 2024"
                                 value={formData.period}
                                 onChange={(e) => setFormData({ ...formData, period: e.target.value })}
+                                className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                             />
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="notes">Notes (Optional)</Label>
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes (Optional)</Label>
                         <Input
-                            id="notes"
                             placeholder="Additional notes"
                             value={formData.notes}
                             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                            className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                         />
                     </div>
 
-                    <div className="flex gap-3 pt-4">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+                    <DialogFooter className="gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => onOpenChange(false)}
+                            className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
+                        >
                             Cancel
                         </Button>
-                        <Button type="submit" className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600">
+                        <Button
+                            type="submit"
+                            className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                        >
                             Record Payment
                         </Button>
-                    </div>
+                    </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>
@@ -924,95 +922,112 @@ const StokvelDetailsDialog: React.FC<StokvelDetailsDialogProps> = ({ open, onOpe
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+            <DialogContent className={cn(
+                "sm:max-w-[680px] max-h-[85vh] overflow-y-auto",
+                "backdrop-blur-xl bg-white/95 dark:bg-gray-900/95",
+                "border border-gray-200/50 dark:border-gray-700/50",
+                "shadow-2xl dark:shadow-black/40"
+            )}>
                 <DialogHeader>
-                    <DialogTitle className="text-2xl">{stokvel.name}</DialogTitle>
-                    <DialogDescription>{stokvel.description}</DialogDescription>
+                    <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                        {stokvel.name}
+                    </DialogTitle>
+                    <DialogDescription className="text-gray-600 dark:text-gray-400">
+                        {stokvel.description}
+                    </DialogDescription>
                 </DialogHeader>
 
                 <Tabs defaultValue="members" className="mt-4">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="members">
+                    <TabsList className="grid w-full grid-cols-2 bg-gray-100/80 dark:bg-gray-800/80">
+                        <TabsTrigger value="members" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700">
                             <Users className="w-4 h-4 mr-2" />
                             Members
                         </TabsTrigger>
-                        <TabsTrigger value="payments">
+                        <TabsTrigger value="payments" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700">
                             <DollarSign className="w-4 h-4 mr-2" />
                             Payments
                         </TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="members" className="space-y-4">
+                    <TabsContent value="members" className="space-y-3 mt-4">
                         {stokvel.members.map((member) => (
-                            <Card key={member.id}>
-                                <CardContent className="pt-6">
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <h4 className="font-semibold text-lg">{member.name}</h4>
-                                            {member.email && (
-                                                <p className="text-sm text-gray-600 dark:text-gray-400">{member.email}</p>
-                                            )}
-                                            {member.phone && (
-                                                <p className="text-sm text-gray-600 dark:text-gray-400">{member.phone}</p>
-                                            )}
-                                        </div>
-                                        <Badge className={member.status === 'active' ? 'bg-emerald-500' : 'bg-gray-500'}>
-                                            {member.status}
-                                        </Badge>
+                            <div
+                                key={member.id}
+                                className="flex items-center justify-between p-4 rounded-xl bg-gray-50/80 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/40"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center shrink-0">
+                                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                            {member.name.charAt(0)}
+                                        </span>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4 mt-4">
-                                        <div>
-                                            <p className="text-xs text-gray-600 dark:text-gray-400">Total Paid</p>
-                                            <p className="text-lg font-semibold">{formatCurrency(member.totalPaid)}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-600 dark:text-gray-400">Amount Owed</p>
-                                            <p className="text-lg font-semibold text-orange-500">{formatCurrency(member.totalOwed)}</p>
-                                        </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{member.name}</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                            {member.email || member.phone || 'No contact info'}
+                                        </p>
                                     </div>
-                                </CardContent>
-                            </Card>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="text-right hidden sm:block">
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">Paid</p>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{formatCurrency(member.totalPaid)}</p>
+                                    </div>
+                                    {member.totalOwed > 0 && (
+                                        <div className="text-right hidden sm:block">
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">Owed</p>
+                                            <p className="text-sm font-semibold text-orange-500 dark:text-orange-400">{formatCurrency(member.totalOwed)}</p>
+                                        </div>
+                                    )}
+                                    <Badge className={cn(
+                                        "text-xs font-semibold border-0",
+                                        member.status === 'active'
+                                            ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                                    )}>
+                                        {member.status}
+                                    </Badge>
+                                </div>
+                            </div>
                         ))}
                     </TabsContent>
 
-                    <TabsContent value="payments" className="space-y-4">
+                    <TabsContent value="payments" className="space-y-3 mt-4">
                         {stokvel.payments.length === 0 ? (
-                            <Card>
-                                <CardContent className="flex flex-col items-center justify-center py-12">
-                                    <DollarSign className="w-12 h-12 text-gray-400 mb-2" />
-                                    <p className="text-gray-600 dark:text-gray-400">No payments recorded yet</p>
-                                </CardContent>
-                            </Card>
+                            <div className="flex flex-col items-center justify-center py-12 text-center rounded-xl bg-gray-50/80 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/40">
+                                <DollarSign className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-2" />
+                                <p className="text-sm text-gray-500 dark:text-gray-400">No payments recorded yet</p>
+                            </div>
                         ) : (
                             stokvel.payments.map((payment) => (
-                                <Card key={payment.id}>
-                                    <CardContent className="pt-6">
-                                        <div className="flex items-start justify-between">
-                                            <div>
-                                                <h4 className="font-semibold">{payment.memberName}</h4>
-                                                <p className="text-sm text-gray-600 dark:text-gray-400">{payment.period}</p>
-                                                <p className="text-xs text-gray-500">{payment.date}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-lg font-bold text-emerald-600">
-                                                    {formatCurrency(payment.amount)}
-                                                </p>
-                                                <Badge className={
-                                                    payment.status === 'paid' ? 'bg-emerald-500' :
-                                                        payment.status === 'pending' ? 'bg-orange-500' :
-                                                            'bg-red-500'
-                                                }>
-                                                    {payment.status}
-                                                </Badge>
-                                            </div>
-                                        </div>
+                                <div
+                                    key={payment.id}
+                                    className="flex items-center justify-between p-4 rounded-xl bg-gray-50/80 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/40"
+                                >
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{payment.memberName}</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{payment.period}</p>
                                         {payment.notes && (
-                                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                                                {payment.notes}
-                                            </p>
+                                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{payment.notes}</p>
                                         )}
-                                    </CardContent>
-                                </Card>
+                                    </div>
+                                    <div className="text-right flex items-center gap-3">
+                                        <div>
+                                            <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                                                {formatCurrency(payment.amount)}
+                                            </p>
+                                            <p className="text-xs text-gray-400 dark:text-gray-500">{payment.date}</p>
+                                        </div>
+                                        <Badge className={cn(
+                                            "text-xs font-semibold border-0",
+                                            payment.status === 'paid' && "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400",
+                                            payment.status === 'pending' && "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400",
+                                            payment.status === 'late' && "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                                        )}>
+                                            {payment.status}
+                                        </Badge>
+                                    </div>
+                                </div>
                             ))
                         )}
                     </TabsContent>

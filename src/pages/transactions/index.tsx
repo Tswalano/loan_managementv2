@@ -24,14 +24,18 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Download, Calendar, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { Plus, Search, ChevronLeft, ChevronRight, Filter, FileSpreadsheet, X, Calendar } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { formatCurrency, formatShortDate, maskAccountLast8Grouped, truncateText } from '@/lib/utils/formatters';
 import { CreateTransactionRequest, Transaction, TransactionType } from '@/types';
 import ViewTransactionDialog from '@/components/transactions/transaction-dialog';
+import { LoanDetailsDialog } from '@/components/loans/loan-details-dialog';
 import TransactionForm from '@/components/transactions/transaction-form';
 import { useToast } from "@/hooks/use-toast";
 import { api, useFinanceData } from '@/lib/api';
 import { cn } from '@/lib/utils';
+
+type TransactionFilter = 'ALL' | 'LOAN' | 'INCOME' | 'TRANSFER' | 'EXPENSE';
 
 export default function TransactionsPage() {
     const { toast } = useToast();
@@ -42,9 +46,12 @@ export default function TransactionsPage() {
     } = useFinanceData();
 
     const [isNewTransactionOpen, setIsNewTransactionOpen] = useState(false);
-    const [selectedType, setSelectedType] = useState<TransactionType | 'ALL'>('ALL');
+    const [selectedType, setSelectedType] = useState<TransactionFilter>('ALL');
     const [searchTerm, setSearchTerm] = useState<string>('');
+    const [startDate, setStartDate] = useState<string>('');
+    const [endDate, setEndDate] = useState<string>('');
     const [viewTransaction, setViewTransaction] = useState<Transaction | null>(null);
+    const [viewLoanId, setViewLoanId] = useState<string | null>(null);
 
     // Pagination and row limit state
     const [currentPage, setCurrentPage] = useState(1);
@@ -109,23 +116,79 @@ export default function TransactionsPage() {
         return colors[type] ?? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
     };
 
+    const matchesSelectedFilter = (type: TransactionType) => {
+        if (selectedType === 'ALL') return true;
+        if (selectedType === 'LOAN') {
+            return type === TransactionType.LOAN_DISBURSEMENT || type === TransactionType.LOAN_PAYMENT;
+        }
+        if (selectedType === 'INCOME') {
+            return type === TransactionType.INCOME || type === TransactionType.INTEREST || type === TransactionType.DEPOSIT;
+        }
+        if (selectedType === 'TRANSFER') {
+            return type === TransactionType.TRANSFER;
+        }
+        return type === TransactionType.EXPENSE || type === TransactionType.FEE || type === TransactionType.WITHDRAWAL;
+    };
+
+    const filterOptions: Array<{ value: TransactionFilter; label: string }> = [
+        { value: 'LOAN', label: 'Loan' },
+        { value: 'INCOME', label: 'Income' },
+        { value: 'TRANSFER', label: 'Transfer' },
+        { value: 'EXPENSE', label: 'Expense' },
+    ];
+
     const filteredTransactions = transactions.filter((transaction: Transaction) => {
         const description = transaction.description || '';
         const category = transaction.category || '';
 
-        const matchesType = selectedType === 'ALL' || transaction.type === selectedType;
+        const matchesType = matchesSelectedFilter(transaction.type);
         const matchesSearch =
             description.toLowerCase().includes(searchTerm.toLowerCase()) ||
             category.toLowerCase().includes(searchTerm.toLowerCase());
 
-        return matchesType && matchesSearch;
+        const txDate = new Date(transaction.date);
+        const matchesStart = !startDate || txDate >= new Date(startDate);
+        const matchesEnd = !endDate || txDate <= new Date(endDate + 'T23:59:59');
+
+        return matchesType && matchesSearch && matchesStart && matchesEnd;
     });
 
     // Pagination calculations
     const totalPages = Math.ceil(filteredTransactions.length / rowsPerPage);
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
-    const currentTransactions = transactions.slice(startIndex, endIndex);
+    const currentTransactions = filteredTransactions.slice(startIndex, endIndex);
+
+    const hasActiveFilters = selectedType !== 'ALL' || searchTerm || startDate || endDate;
+
+    const clearFilters = () => {
+        setSelectedType('ALL');
+        setSearchTerm('');
+        setStartDate('');
+        setEndDate('');
+        setCurrentPage(1);
+    };
+
+    const exportToExcel = () => {
+        const wsData = [
+            ['Date', 'Description', 'Category', 'Type', 'Amount', 'Reference', 'Account'],
+            ...filteredTransactions.map((t: Transaction) => [
+                formatShortDate(new Date(t.date)),
+                t.description || '',
+                t.category || '',
+                t.type,
+                Number(t.amount),
+                t.reference || '',
+                t.fromBalance?.accountName || t.toBalance?.accountName || '',
+            ]),
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        ws['!cols'] = [{ wch: 14 }, { wch: 40 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 20 }, { wch: 24 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+        XLSX.writeFile(wb, `transactions_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    };
 
     console.log("Rendering TransactionsPage:", currentTransactions);
 
@@ -211,20 +274,27 @@ export default function TransactionsPage() {
                 </div>
                 <div className="flex flex-wrap gap-3">
                     <Button
-                        size="sm"
                         variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            const today = new Date().toISOString().slice(0, 10);
+                            setStartDate(startDate || today);
+                            setEndDate(endDate || today);
+                            setCurrentPage(1);
+                        }}
                         className="backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border border-gray-200/50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-800/80"
                     >
                         <Calendar className="h-4 w-4 mr-2" />
                         Filter Date
                     </Button>
                     <Button
-                        size="sm"
                         variant="outline"
+                        size="sm"
+                        onClick={exportToExcel}
                         className="backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border border-gray-200/50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-800/80"
                     >
-                        <Download className="h-4 w-4 mr-2" />
-                        Export
+                        <FileSpreadsheet className="h-4 w-4 mr-2" />
+                        Export Excel
                     </Button>
                     <Button
                         size="sm"
@@ -283,6 +353,35 @@ export default function TransactionsPage() {
                                 className="pl-10 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600"
                             />
                         </div>
+                        <Input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => {
+                                setStartDate(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full sm:w-44 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600"
+                        />
+                        <Input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => {
+                                setEndDate(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full sm:w-44 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600"
+                        />
+                        {hasActiveFilters && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={clearFilters}
+                                className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600"
+                            >
+                                <X className="h-4 w-4 mr-2" />
+                                Clear
+                            </Button>
+                        )}
                         <div className="flex flex-wrap gap-2">
                             <Button
                                 variant="outline"
@@ -301,23 +400,23 @@ export default function TransactionsPage() {
                                 <Filter className="h-3.5 w-3.5 mr-1.5" />
                                 All
                             </Button>
-                            {Object.values(TransactionType).map((type) => (
+                            {filterOptions.map((option) => (
                                 <Button
-                                    key={type}
+                                    key={option.value}
                                     variant="outline"
                                     size="sm"
                                     className={cn(
                                         "transition-all duration-200",
-                                        selectedType === type
+                                        selectedType === option.value
                                             ? "bg-emerald-600 text-white hover:bg-emerald-700 border-emerald-600"
                                             : "bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600"
                                     )}
                                     onClick={() => {
-                                        setSelectedType(type);
+                                        setSelectedType(option.value);
                                         setCurrentPage(1);
                                     }}
                                 >
-                                    {type.replace('_', ' ')}
+                                    {option.label}
                                 </Button>
                             ))}
                         </div>
@@ -512,6 +611,16 @@ export default function TransactionsPage() {
                 transaction={viewTransaction}
                 open={!!viewTransaction}
                 onClose={() => setViewTransaction(null)}
+                onViewLoan={(loanId) => {
+                    setViewTransaction(null);
+                    setViewLoanId(loanId);
+                }}
+            />
+
+            <LoanDetailsDialog
+                loanId={viewLoanId}
+                open={!!viewLoanId}
+                onClose={() => setViewLoanId(null)}
             />
         </div>
     );

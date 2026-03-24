@@ -4,9 +4,9 @@ import { MinimumFooter } from '../footer';
 
 export default function RootLayout() {
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+        <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors">
             <Navbar />
-            <main className="container mx-auto px-4 py-8">
+            <main className="flex-1 container mx-auto px-4 py-8">
                 <Outlet />
             </main>
             <MinimumFooter />

@@ -9,11 +9,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatPercent } from '@/lib/utils/formatters';
 import { Plus, Download, Calendar, TrendingUp, DollarSign, AlertCircle } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { NewLoanDialog } from '@/components/loans/new-loan-dialog';
 import LoanTableRecords from '@/components/loans/loan-table';
 import { api } from '@/lib/api';
 import { useFinanceData } from '@/lib/api';
-import { CreateLoanRequest, LoanPaymentRequest } from '@/types';
+import { CreateLoanRequest, Loan, LoanPaymentRequest } from '@/types';
 import { calculateLoanMetrics } from '@/components/dashboard/utils';
 import ErrorComponent from '@/components/error/error-component';
 import { cn } from '@/lib/utils';
@@ -90,6 +91,44 @@ export default function LoanSummaryPage() {
             };
         }
     }
+
+    const exportToExcel = () => {
+        const wsData = [
+            ['Borrower', 'Email', 'Phone', 'Principal', 'Interest Rate', 'Term (Months)', 'Status', 'Outstanding', 'Total Paid', 'Disbursed', 'Maturity'],
+            ...loans.map((loan: Loan) => [
+                loan.borrowerName,
+                loan.borrowerEmail || '',
+                loan.borrowerPhone || '',
+                Number(loan.principalAmount),
+                Number(loan.interestRate),
+                Number(loan.termMonths),
+                loan.status,
+                Number(loan.outstandingBalance || '0'),
+                Number(loan.totalPaid || '0'),
+                loan.disbursementDate ? new Date(loan.disbursementDate).toLocaleDateString() : '',
+                loan.maturityDate ? new Date(loan.maturityDate).toLocaleDateString() : '',
+            ]),
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        ws['!cols'] = [
+            { wch: 24 },
+            { wch: 28 },
+            { wch: 18 },
+            { wch: 14 },
+            { wch: 14 },
+            { wch: 14 },
+            { wch: 14 },
+            { wch: 16 },
+            { wch: 14 },
+            { wch: 14 },
+            { wch: 14 },
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Loans');
+        XLSX.writeFile(wb, `loans_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    };
 
     if (isLoading) {
         return (
@@ -178,10 +217,11 @@ export default function LoanSummaryPage() {
                     <Button
                         variant="outline"
                         size="sm"
+                        onClick={exportToExcel}
                         className="backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/80"
                     >
                         <Download className="h-4 w-4 mr-2" />
-                        Export
+                        Export Excel
                     </Button>
                     <Button
                         size="sm"
@@ -277,146 +317,6 @@ export default function LoanSummaryPage() {
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                             From {metrics.activeLoans} active loans
                         </p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Charts Section */}
-            <div className="grid gap-6 md:grid-cols-2">
-                {/* Loan Status Distribution */}
-                <Card className={cn(
-                    "backdrop-blur-xl bg-white/80 dark:bg-gray-900/80",
-                    "border border-gray-200/50 dark:border-gray-700/50",
-                    "rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/20"
-                )}>
-                    <CardHeader>
-                        <CardTitle className="text-gray-900 dark:text-white">Loan Status Distribution</CardTitle>
-                        <CardDescription className="text-gray-600 dark:text-gray-400">
-                            Overview of loan statuses
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex items-center justify-center h-[300px]">
-                            <div className="relative w-64 h-64">
-                                {/* Donut Chart */}
-                                <svg viewBox="0 0 200 200" className="w-full h-full transform -rotate-90">
-                                    <circle
-                                        cx="100"
-                                        cy="100"
-                                        r="80"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        className="stroke-gray-200 dark:stroke-gray-700"
-                                        strokeWidth="40"
-                                    />
-                                    {(() => {
-                                        const total = statusDistribution.reduce((sum, item) => sum + item.value, 0);
-                                        let currentAngle = 0;
-
-                                        return statusDistribution.map((item, index) => {
-                                            const percentage = (item.value / total) * 100;
-                                            const strokeDasharray = `${percentage * 5.03} ${502.4 - (percentage * 5.03)}`;
-                                            const rotation = currentAngle;
-                                            currentAngle += percentage * 3.6;
-
-                                            return (
-                                                <circle
-                                                    key={index}
-                                                    cx="100"
-                                                    cy="100"
-                                                    r="80"
-                                                    fill="none"
-                                                    stroke={item.color}
-                                                    strokeWidth="40"
-                                                    strokeDasharray={strokeDasharray}
-                                                    strokeDashoffset="0"
-                                                    style={{ transform: `rotate(${rotation}deg)`, transformOrigin: 'center' }}
-                                                    className="transition-all duration-500"
-                                                />
-                                            );
-                                        });
-                                    })()}
-                                </svg>
-
-                                {/* Center Text */}
-                                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                    <div className="text-4xl font-bold text-gray-900 dark:text-white">
-                                        {loans.length}
-                                    </div>
-                                    <div className="text-sm text-gray-500 dark:text-gray-400">Total Loans</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Legend */}
-                        <div className="flex flex-wrap justify-center gap-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                            {statusDistribution.map((item, index) => (
-                                <div key={index} className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                                        {item.name} ({item.value})
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Loan Size Distribution */}
-                <Card className={cn(
-                    "backdrop-blur-xl bg-white/80 dark:bg-gray-900/80",
-                    "border border-gray-200/50 dark:border-gray-700/50",
-                    "rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/20"
-                )}>
-                    <CardHeader>
-                        <CardTitle className="text-gray-900 dark:text-white">Loan Size Distribution</CardTitle>
-                        <CardDescription className="text-gray-600 dark:text-gray-400">
-                            Number of loans by amount range
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="h-[300px] flex items-end justify-around gap-4 p-4">
-                            {(() => {
-                                const maxCount = Math.max(...loansBySize.map(i => Number(i.count || 0)), 0) || 0;
-                                const colors = [
-                                    'from-blue-500 to-blue-600',
-                                    'from-emerald-500 to-emerald-600',
-                                    'from-purple-500 to-purple-600',
-                                    'from-orange-500 to-orange-600',
-                                ];
-                                return loansBySize.map((item, index) => {
-                                    const count = Number(item.count || 0);
-                                    const heightPercent = maxCount > 0 ? (count / maxCount) * 100 : 0;
-                                    const colorClass = colors[index % colors.length];
-
-                                    return (
-                                        <div key={index} className="flex-1 flex flex-col items-center gap-3">
-                                            {/* give this wrapper a fixed height so percentage heights are meaningful */}
-                                            <div className="w-full relative group h-48"> {/* h-48 = 12rem; change as needed */}
-                                                <div
-                                                    className={cn(
-                                                        "absolute left-0 right-0 bottom-0 rounded-t-xl bg-gradient-to-t transition-all duration-500 shadow-lg group-hover:shadow-xl",
-                                                        colorClass
-                                                    )}
-                                                    style={{ height: `${Math.max(heightPercent, 5)}%` }} // keep a visible min (5%)
-                                                />
-                                                {/* count label positioned above the bar */}
-                                                {count > 0 && (
-                                                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-sm font-bold text-gray-900 dark:text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        {count}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <span className="text-xs font-medium text-gray-600 dark:text-gray-400 text-center">
-                                                {item.range}
-                                            </span>
-                                        </div>
-                                    );
-                                });
-                            })()}
-
-                        </div>
                     </CardContent>
                 </Card>
             </div>
