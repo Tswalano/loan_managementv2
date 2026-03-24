@@ -2,6 +2,10 @@ CREATE TYPE "public"."account_status" AS ENUM('ACTIVE', 'INACTIVE', 'SUSPENDED')
 CREATE TYPE "public"."account_type" AS ENUM('SAVINGS', 'CHECKING', 'LOAN', 'INVESTMENT', 'CASH', 'BANK', 'MOBILE_MONEY', 'LOAN_RECEIVABLE');--> statement-breakpoint
 CREATE TYPE "public"."invitation_status" AS ENUM('PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED');--> statement-breakpoint
 CREATE TYPE "public"."loan_status" AS ENUM('PENDING', 'ACTIVE', 'PAID', 'DEFAULTED', 'CANCELLED');--> statement-breakpoint
+CREATE TYPE "public"."stokvel_frequency" AS ENUM('weekly', 'monthly', 'quarterly');--> statement-breakpoint
+CREATE TYPE "public"."stokvel_member_status" AS ENUM('active', 'inactive');--> statement-breakpoint
+CREATE TYPE "public"."stokvel_payment_status" AS ENUM('paid', 'pending', 'late');--> statement-breakpoint
+CREATE TYPE "public"."stokvel_status" AS ENUM('active', 'completed', 'paused');--> statement-breakpoint
 CREATE TYPE "public"."transaction_type" AS ENUM('INCOME', 'EXPENSE', 'LOAN_PAYMENT', 'LOAN_DISBURSEMENT', 'TRANSFER', 'DEPOSIT', 'WITHDRAWAL', 'FEE', 'INTEREST');--> statement-breakpoint
 CREATE TYPE "public"."user_role" AS ENUM('OWNER', 'ADMIN', 'MANAGER', 'ACCOUNTANT', 'VIEWER');--> statement-breakpoint
 CREATE TABLE "audit_logs" (
@@ -101,6 +105,53 @@ CREATE TABLE "organizations" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "stokvel_members" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"stokvel_id" uuid NOT NULL,
+	"organization_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"name" text NOT NULL,
+	"email" text,
+	"phone" text,
+	"joined_date" timestamp NOT NULL,
+	"total_paid" numeric(15, 2) DEFAULT '0.00' NOT NULL,
+	"total_owed" numeric(15, 2) DEFAULT '0.00' NOT NULL,
+	"status" "stokvel_member_status" DEFAULT 'active' NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "stokvel_payments" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"stokvel_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"organization_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"amount" numeric(15, 2) NOT NULL,
+	"date" timestamp NOT NULL,
+	"period" text NOT NULL,
+	"status" "stokvel_payment_status" DEFAULT 'paid' NOT NULL,
+	"notes" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "stokvels" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"organization_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"name" text NOT NULL,
+	"description" text,
+	"contribution_amount" numeric(15, 2) NOT NULL,
+	"frequency" "stokvel_frequency" DEFAULT 'monthly' NOT NULL,
+	"start_date" timestamp NOT NULL,
+	"target_date" timestamp NOT NULL,
+	"status" "stokvel_status" DEFAULT 'active' NOT NULL,
+	"target_amount" numeric(15, 2),
+	"metadata" jsonb DEFAULT '{}',
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "transactions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" uuid NOT NULL,
@@ -148,6 +199,15 @@ ALTER TABLE "loans" ADD CONSTRAINT "loans_user_id_users_id_fk" FOREIGN KEY ("use
 ALTER TABLE "loans" ADD CONSTRAINT "loans_balance_id_balances_id_fk" FOREIGN KEY ("balance_id") REFERENCES "public"."balances"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "organization_members" ADD CONSTRAINT "organization_members_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "organization_members" ADD CONSTRAINT "organization_members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "stokvel_members" ADD CONSTRAINT "stokvel_members_stokvel_id_stokvels_id_fk" FOREIGN KEY ("stokvel_id") REFERENCES "public"."stokvels"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "stokvel_members" ADD CONSTRAINT "stokvel_members_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "stokvel_members" ADD CONSTRAINT "stokvel_members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "stokvel_payments" ADD CONSTRAINT "stokvel_payments_stokvel_id_stokvels_id_fk" FOREIGN KEY ("stokvel_id") REFERENCES "public"."stokvels"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "stokvel_payments" ADD CONSTRAINT "stokvel_payments_member_id_stokvel_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."stokvel_members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "stokvel_payments" ADD CONSTRAINT "stokvel_payments_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "stokvel_payments" ADD CONSTRAINT "stokvel_payments_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "stokvels" ADD CONSTRAINT "stokvels_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "stokvels" ADD CONSTRAINT "stokvels_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "transactions" ADD CONSTRAINT "transactions_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "transactions" ADD CONSTRAINT "transactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "transactions" ADD CONSTRAINT "transactions_from_balance_id_balances_id_fk" FOREIGN KEY ("from_balance_id") REFERENCES "public"."balances"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -168,6 +228,16 @@ CREATE INDEX "loans_status_idx" ON "loans" USING btree ("status");--> statement-
 CREATE INDEX "org_members_org_user_idx" ON "organization_members" USING btree ("organization_id","user_id");--> statement-breakpoint
 CREATE INDEX "org_members_user_idx" ON "organization_members" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "organizations_name_idx" ON "organizations" USING btree ("name");--> statement-breakpoint
+CREATE INDEX "stokvel_members_stokvel_idx" ON "stokvel_members" USING btree ("stokvel_id");--> statement-breakpoint
+CREATE INDEX "stokvel_members_org_idx" ON "stokvel_members" USING btree ("organization_id");--> statement-breakpoint
+CREATE INDEX "stokvel_members_status_idx" ON "stokvel_members" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "stokvel_payments_stokvel_idx" ON "stokvel_payments" USING btree ("stokvel_id");--> statement-breakpoint
+CREATE INDEX "stokvel_payments_member_idx" ON "stokvel_payments" USING btree ("member_id");--> statement-breakpoint
+CREATE INDEX "stokvel_payments_org_idx" ON "stokvel_payments" USING btree ("organization_id");--> statement-breakpoint
+CREATE INDEX "stokvel_payments_date_idx" ON "stokvel_payments" USING btree ("date");--> statement-breakpoint
+CREATE INDEX "stokvels_org_idx" ON "stokvels" USING btree ("organization_id");--> statement-breakpoint
+CREATE INDEX "stokvels_user_id_idx" ON "stokvels" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "stokvels_status_idx" ON "stokvels" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "transactions_org_idx" ON "transactions" USING btree ("organization_id");--> statement-breakpoint
 CREATE INDEX "transactions_user_id_idx" ON "transactions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "transactions_date_idx" ON "transactions" USING btree ("date");--> statement-breakpoint

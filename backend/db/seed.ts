@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { createHmac, randomBytes } from 'crypto';
+import { and, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import {
@@ -9,6 +10,9 @@ import {
     balances,
     loans,
     transactions,
+    stokvels,
+    stokvelMembers,
+    stokvelPayments,
 } from './schema';
 
 // ──────────────────────────────────────────────
@@ -23,6 +27,15 @@ function hashPassword(password: string): string {
 
 function d(dateStr: string): Date {
     return new Date(dateStr);
+}
+
+async function firstOrInsert<T>(
+    finder: () => Promise<T | undefined>,
+    inserter: () => Promise<T>
+): Promise<T> {
+    const existing = await finder();
+    if (existing) return existing;
+    return inserter();
 }
 
 // ──────────────────────────────────────────────
@@ -43,7 +56,7 @@ const runSeed = async () => {
 
     console.log('  → inserting users');
 
-    const [adminUser] = await db
+    const [insertedAdminUser] = await db
         .insert(users)
         .values({
             email: 'moganegb@gmail.com',
@@ -55,7 +68,7 @@ const runSeed = async () => {
         .onConflictDoNothing()
         .returning();
 
-    const [demoUser] = await db
+    const [insertedDemoUser] = await db
         .insert(users)
         .values({
             email: 'email@financeco.com',
@@ -67,110 +80,190 @@ const runSeed = async () => {
         .onConflictDoNothing()
         .returning();
 
+    const [existingAdminUser] = insertedAdminUser
+        ? [insertedAdminUser]
+        : await db.select().from(users).where(eq(users.email, 'moganegb@gmail.com')).limit(1);
+
+    const [existingDemoUser] = insertedDemoUser
+        ? [insertedDemoUser]
+        : await db.select().from(users).where(eq(users.email, 'email@financeco.com')).limit(1);
+
+    const adminUser = existingAdminUser;
+    const demoUser = existingDemoUser;
+
     if (!adminUser || !demoUser) {
-        console.log('  ℹ️  Users already exist — skipping remaining seed');
-        await connection.end();
-        return;
+        throw new Error('Failed to resolve seed users');
     }
 
     // ── 2. Organizations ──────────────────────
 
     console.log('  → inserting organizations');
 
-    const [adminOrg] = await db
-        .insert(organizations)
-        .values({
-            name: 'Glen Mogane Finance',
-            description: 'Personal finance management',
-        })
-        .returning();
+    const adminOrg = await firstOrInsert(
+        async () => {
+            const [existing] = await db.select().from(organizations).where(eq(organizations.name, 'Glen Mogane Finance')).limit(1);
+            return existing;
+        },
+        async () => {
+            const [created] = await db
+                .insert(organizations)
+                .values({
+                    name: 'Glen Mogane Finance',
+                    description: 'Personal finance management',
+                })
+                .returning();
+            return created;
+        }
+    );
 
-    const [demoOrg] = await db
-        .insert(organizations)
-        .values({
-            name: 'Finance Co',
-            description: 'Demo organisation with historical 2024 data',
-        })
-        .returning();
+    const demoOrg = await firstOrInsert(
+        async () => {
+            const [existing] = await db.select().from(organizations).where(eq(organizations.name, 'Finance Co')).limit(1);
+            return existing;
+        },
+        async () => {
+            const [created] = await db
+                .insert(organizations)
+                .values({
+                    name: 'Finance Co',
+                    description: 'Demo organisation with historical 2024 data',
+                })
+                .returning();
+            return created;
+        }
+    );
 
     // ── 3. Memberships ────────────────────────
 
     console.log('  → inserting memberships');
 
-    await db.insert(organizationMembers).values([
-        {
+    const [adminMembership] = await db.select().from(organizationMembers).where(
+        and(
+            eq(organizationMembers.organizationId, adminOrg.id),
+            eq(organizationMembers.userId, adminUser.id),
+        )
+    ).limit(1);
+
+    if (!adminMembership) {
+        await db.insert(organizationMembers).values({
             organizationId: adminOrg.id,
             userId: adminUser.id,
             role: 'OWNER',
-        },
-        {
+        });
+    }
+
+    const [demoMembership] = await db.select().from(organizationMembers).where(
+        and(
+            eq(organizationMembers.organizationId, demoOrg.id),
+            eq(organizationMembers.userId, demoUser.id),
+        )
+    ).limit(1);
+
+    if (!demoMembership) {
+        await db.insert(organizationMembers).values({
             organizationId: demoOrg.id,
             userId: demoUser.id,
             role: 'OWNER',
-        },
-    ]);
+        });
+    }
 
     // ── 4. Balances (accounts) ────────────────
 
     console.log('  → inserting balances');
 
     // Admin user – simple personal accounts
-    const [adminChecking] = await db
-        .insert(balances)
-        .values({
-            organizationId: adminOrg.id,
-            userId: adminUser.id,
-            type: 'CHECKING',
-            bankName: 'FNB',
-            accountName: 'FNB Cheque',
-            accountNumber: '62001234567',
-            balance: '45000.00',
-            currency: 'ZAR',
-        })
-        .returning();
+    const adminChecking = await firstOrInsert(
+        async () => {
+            const [existing] = await db.select().from(balances).where(eq(balances.accountNumber, '62001234567')).limit(1);
+            return existing;
+        },
+        async () => {
+            const [created] = await db
+                .insert(balances)
+                .values({
+                    organizationId: adminOrg.id,
+                    userId: adminUser.id,
+                    type: 'CHECKING',
+                    bankName: 'FNB',
+                    accountName: 'FNB Cheque',
+                    accountNumber: '62001234567',
+                    balance: '45000.00',
+                    currency: 'ZAR',
+                })
+                .returning();
+            return created;
+        }
+    );
 
     // Demo user – richer set for 2024 demo
-    const [demoChecking] = await db
-        .insert(balances)
-        .values({
-            organizationId: demoOrg.id,
-            userId: demoUser.id,
-            type: 'CHECKING',
-            bankName: 'Standard Bank',
-            accountName: 'Business Current Account',
-            accountNumber: '001234567890',
-            balance: '238500.00',
-            currency: 'ZAR',
-        })
-        .returning();
+    const demoChecking = await firstOrInsert(
+        async () => {
+            const [existing] = await db.select().from(balances).where(eq(balances.accountNumber, '001234567890')).limit(1);
+            return existing;
+        },
+        async () => {
+            const [created] = await db
+                .insert(balances)
+                .values({
+                    organizationId: demoOrg.id,
+                    userId: demoUser.id,
+                    type: 'CHECKING',
+                    bankName: 'Standard Bank',
+                    accountName: 'Business Current Account',
+                    accountNumber: '001234567890',
+                    balance: '238500.00',
+                    currency: 'ZAR',
+                })
+                .returning();
+            return created;
+        }
+    );
 
-    const [demoSavings] = await db
-        .insert(balances)
-        .values({
-            organizationId: demoOrg.id,
-            userId: demoUser.id,
-            type: 'SAVINGS',
-            bankName: 'Nedbank',
-            accountName: 'Business Savings',
-            accountNumber: '1987654321',
-            balance: '520000.00',
-            currency: 'ZAR',
-        })
-        .returning();
+    const demoSavings = await firstOrInsert(
+        async () => {
+            const [existing] = await db.select().from(balances).where(eq(balances.accountNumber, '1987654321')).limit(1);
+            return existing;
+        },
+        async () => {
+            const [created] = await db
+                .insert(balances)
+                .values({
+                    organizationId: demoOrg.id,
+                    userId: demoUser.id,
+                    type: 'SAVINGS',
+                    bankName: 'Nedbank',
+                    accountName: 'Business Savings',
+                    accountNumber: '1987654321',
+                    balance: '520000.00',
+                    currency: 'ZAR',
+                })
+                .returning();
+            return created;
+        }
+    );
 
-    const [demoLoanFund] = await db
-        .insert(balances)
-        .values({
-            organizationId: demoOrg.id,
-            userId: demoUser.id,
-            type: 'LOAN_RECEIVABLE',
-            bankName: 'Finance Co',
-            accountName: 'Loan Portfolio Fund',
-            accountNumber: 'LC-LOAN-2024',
-            balance: '1250000.00',
-            currency: 'ZAR',
-        })
-        .returning();
+    const demoLoanFund = await firstOrInsert(
+        async () => {
+            const [existing] = await db.select().from(balances).where(eq(balances.accountNumber, 'LC-LOAN-2024')).limit(1);
+            return existing;
+        },
+        async () => {
+            const [created] = await db
+                .insert(balances)
+                .values({
+                    organizationId: demoOrg.id,
+                    userId: demoUser.id,
+                    type: 'LOAN_RECEIVABLE',
+                    bankName: 'Finance Co',
+                    accountName: 'Loan Portfolio Fund',
+                    accountNumber: 'LC-LOAN-2024',
+                    balance: '1250000.00',
+                    currency: 'ZAR',
+                })
+                .returning();
+            return created;
+        }
+    );
 
     // ── 5. Loans (2024 data) ──────────────────
 
@@ -331,7 +424,24 @@ const runSeed = async () => {
         },
     ];
 
-    const insertedLoans = await db.insert(loans).values(loansData).returning();
+    const insertedLoans = [];
+    for (const loanData of loansData) {
+        const [existingLoan] = await db.select().from(loans).where(
+            and(
+                eq(loans.organizationId, loanData.organizationId),
+                eq(loans.borrowerName, loanData.borrowerName),
+                eq(loans.createdAt, loanData.createdAt),
+            )
+        ).limit(1);
+
+        if (existingLoan) {
+            insertedLoans.push(existingLoan);
+            continue;
+        }
+
+        const [createdLoan] = await db.insert(loans).values(loanData).returning();
+        insertedLoans.push(createdLoan);
+    }
 
     // ── 6. Transactions (2024) ────────────────
 
@@ -664,21 +774,974 @@ const runSeed = async () => {
         },
     ];
 
-    await db.insert(transactions).values(txData);
+    for (const tx of txData) {
+        const [existingTx] = await db.select().from(transactions).where(eq(transactions.reference, tx.reference)).limit(1);
+        if (!existingTx) {
+            await db.insert(transactions).values(tx);
+        }
+    }
 
-    // ── 7. Simple admin user transaction ─────
+    // ── 7. Stokvels, members, and payments ───
 
-    await db.insert(transactions).values({
-        organizationId: adminOrg.id,
-        userId: adminUser.id,
-        amount: '45000.00',
-        type: 'DEPOSIT',
-        category: 'Salary',
-        description: 'Initial account deposit',
-        reference: 'DEP-ADMIN-001',
-        toBalanceId: adminChecking.id,
-        date: d('2024-01-01'),
-    });
+    console.log('  → inserting stokvels');
+
+    const familyStokvel = await firstOrInsert(
+        async () => {
+            const [existing] = await db.select().from(stokvels).where(
+                and(
+                    eq(stokvels.organizationId, demoOrg.id),
+                    eq(stokvels.name, 'Family Savings Circle'),
+                )
+            ).limit(1);
+            return existing;
+        },
+        async () => {
+            const [created] = await db.insert(stokvels).values({
+                organizationId: demoOrg.id,
+                userId: demoUser.id,
+                name: 'Family Savings Circle',
+                description: 'Monthly family contributions for school fees, emergencies, and year-end goals.',
+                contributionAmount: '1000.00',
+                frequency: 'monthly',
+                startDate: d('2024-01-01'),
+                targetDate: d('2026-12-01'),
+                status: 'active',
+                targetAmount: '50000.00',
+                metadata: { theme: 'family' },
+            }).returning();
+            return created;
+        }
+    );
+
+    const groceryStokvel = await firstOrInsert(
+        async () => {
+            const [existing] = await db.select().from(stokvels).where(
+                and(
+                    eq(stokvels.organizationId, demoOrg.id),
+                    eq(stokvels.name, 'Township Grocery Club'),
+                )
+            ).limit(1);
+            return existing;
+        },
+        async () => {
+            const [created] = await db.insert(stokvels).values({
+                organizationId: demoOrg.id,
+                userId: demoUser.id,
+                name: 'Township Grocery Club',
+                description: 'Bulk grocery stokvel helping members stock up before month-end.',
+                contributionAmount: '750.00',
+                frequency: 'monthly',
+                startDate: d('2024-03-01'),
+                targetDate: d('2027-02-01'),
+                status: 'active',
+                targetAmount: '36000.00',
+                metadata: { theme: 'groceries' },
+            }).returning();
+            return created;
+        }
+    );
+
+    const january2026Stokvel = await firstOrInsert(
+        async () => {
+            const [existing] = await db.select().from(stokvels).where(
+                and(
+                    eq(stokvels.organizationId, demoOrg.id),
+                    eq(stokvels.name, 'January 2026 Goal Stokvel'),
+                )
+            ).limit(1);
+            return existing;
+        },
+        async () => {
+            const [created] = await db.insert(stokvels).values({
+                organizationId: demoOrg.id,
+                userId: demoUser.id,
+                name: 'January 2026 Goal Stokvel',
+                description: '2026 demo stokvel showing current members, catch-up payments, and skipped months clearly.',
+                contributionAmount: '1000.00',
+                frequency: 'monthly',
+                startDate: d('2026-01-01'),
+                targetDate: d('2026-12-01'),
+                status: 'active',
+                targetAmount: '12000.00',
+                metadata: { theme: '2026-demo' },
+            }).returning();
+            return created;
+        }
+    );
+
+    console.log('  → inserting stokvel members');
+
+    const familyMemberSeeds = [
+        {
+            stokvelId: familyStokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Kabelo Maseko',
+            email: 'kabelo.maseko@example.com',
+            phone: '+27711230001',
+            joinedDate: d('2024-01-01'),
+            totalPaid: '3000.00',
+            totalOwed: '0.00',
+            status: 'active',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Nandi Mokoena',
+            email: 'nandi.mokoena@example.com',
+            phone: '+27711230002',
+            joinedDate: d('2024-01-01'),
+            totalPaid: '3000.00',
+            totalOwed: '0.00',
+            status: 'active',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Thuso Mbele',
+            email: 'thuso.mbele@example.com',
+            phone: '+27711230003',
+            joinedDate: d('2024-01-01'),
+            totalPaid: '2000.00',
+            totalOwed: '1000.00',
+            status: 'active',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Zanele Dube',
+            email: 'zanele.dube@example.com',
+            phone: '+27711230004',
+            joinedDate: d('2024-01-15'),
+            totalPaid: '3000.00',
+            totalOwed: '0.00',
+            status: 'active',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Brian Ndlovu',
+            email: 'brian.ndlovu@example.com',
+            phone: '+27711230005',
+            joinedDate: d('2024-02-01'),
+            totalPaid: '1000.00',
+            totalOwed: '2000.00',
+            status: 'active',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Lindiwe Khosa',
+            email: 'lindiwe.khosa@example.com',
+            phone: '+27711230006',
+            joinedDate: d('2024-02-01'),
+            totalPaid: '2000.00',
+            totalOwed: '1000.00',
+            status: 'active',
+        },
+    ];
+
+    const familyMembers = [];
+    for (const member of familyMemberSeeds) {
+        const [existingMember] = await db.select().from(stokvelMembers).where(
+            and(
+                eq(stokvelMembers.stokvelId, member.stokvelId),
+                eq(stokvelMembers.name, member.name),
+            )
+        ).limit(1);
+
+        if (existingMember) {
+            familyMembers.push(existingMember);
+            continue;
+        }
+
+        const [createdMember] = await db.insert(stokvelMembers).values(member).returning();
+        familyMembers.push(createdMember);
+    }
+
+    const groceryMemberSeeds = [
+        {
+            stokvelId: groceryStokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Precious Hadebe',
+            email: 'precious.hadebe@example.com',
+            phone: '+27711230101',
+            joinedDate: d('2024-03-01'),
+            totalPaid: '2250.00',
+            totalOwed: '0.00',
+            status: 'active',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Sizwe Mthembu',
+            email: 'sizwe.mthembu@example.com',
+            phone: '+27711230102',
+            joinedDate: d('2024-03-01'),
+            totalPaid: '1500.00',
+            totalOwed: '750.00',
+            status: 'active',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Boitumelo Seabi',
+            email: 'boitumelo.seabi@example.com',
+            phone: '+27711230103',
+            joinedDate: d('2024-03-01'),
+            totalPaid: '2250.00',
+            totalOwed: '0.00',
+            status: 'active',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Anele Tshabalala',
+            email: 'anele.tshabalala@example.com',
+            phone: '+27711230104',
+            joinedDate: d('2024-03-08'),
+            totalPaid: '2250.00',
+            totalOwed: '0.00',
+            status: 'active',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Lebo Radebe',
+            email: 'lebo.radebe@example.com',
+            phone: '+27711230105',
+            joinedDate: d('2024-03-15'),
+            totalPaid: '1500.00',
+            totalOwed: '750.00',
+            status: 'active',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Yandiswa Gqirana',
+            email: 'yandiswa.gqirana@example.com',
+            phone: '+27711230106',
+            joinedDate: d('2024-03-15'),
+            totalPaid: '2250.00',
+            totalOwed: '0.00',
+            status: 'active',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Mpho Pheko',
+            email: 'mpho.pheko@example.com',
+            phone: '+27711230107',
+            joinedDate: d('2024-03-22'),
+            totalPaid: '750.00',
+            totalOwed: '1500.00',
+            status: 'inactive',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Karabo Mohlala',
+            email: 'karabo.mohlala@example.com',
+            phone: '+27711230108',
+            joinedDate: d('2024-03-22'),
+            totalPaid: '2250.00',
+            totalOwed: '0.00',
+            status: 'active',
+        },
+    ];
+
+    const groceryMembers = [];
+    for (const member of groceryMemberSeeds) {
+        const [existingMember] = await db.select().from(stokvelMembers).where(
+            and(
+                eq(stokvelMembers.stokvelId, member.stokvelId),
+                eq(stokvelMembers.name, member.name),
+            )
+        ).limit(1);
+
+        if (existingMember) {
+            groceryMembers.push(existingMember);
+            continue;
+        }
+
+        const [createdMember] = await db.insert(stokvelMembers).values(member).returning();
+        groceryMembers.push(createdMember);
+    }
+
+    const january2026MemberSeeds = [
+        {
+            stokvelId: january2026Stokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Lerato Mokoena',
+            email: 'lerato.mokoena2026@example.com',
+            phone: '+27711230201',
+            joinedDate: d('2026-01-01'),
+            totalPaid: '3000.00',
+            totalOwed: '0.00',
+            status: 'active',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Sipho Ndlovu',
+            email: 'sipho.ndlovu2026@example.com',
+            phone: '+27711230202',
+            joinedDate: d('2026-01-01'),
+            totalPaid: '2000.00',
+            totalOwed: '1000.00',
+            status: 'active',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Ayanda Khumalo',
+            email: 'ayanda.khumalo2026@example.com',
+            phone: '+27711230203',
+            joinedDate: d('2026-01-01'),
+            totalPaid: '3000.00',
+            totalOwed: '0.00',
+            status: 'active',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Mpho Pheko',
+            email: 'mpho.pheko2026@example.com',
+            phone: '+27711230204',
+            joinedDate: d('2026-01-01'),
+            totalPaid: '1000.00',
+            totalOwed: '2000.00',
+            status: 'active',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Zanele Dube',
+            email: 'zanele.dube2026@example.com',
+            phone: '+27711230205',
+            joinedDate: d('2026-01-01'),
+            totalPaid: '3000.00',
+            totalOwed: '0.00',
+            status: 'active',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            name: 'Thando Molefe',
+            email: 'thando.molefe2026@example.com',
+            phone: '+27711230206',
+            joinedDate: d('2026-01-01'),
+            totalPaid: '2000.00',
+            totalOwed: '1000.00',
+            status: 'active',
+        },
+    ];
+
+    const january2026Members = [];
+    for (const member of january2026MemberSeeds) {
+        const [existingMember] = await db.select().from(stokvelMembers).where(
+            and(
+                eq(stokvelMembers.stokvelId, member.stokvelId),
+                eq(stokvelMembers.name, member.name),
+            )
+        ).limit(1);
+
+        if (existingMember) {
+            january2026Members.push(existingMember);
+            continue;
+        }
+
+        const [createdMember] = await db.insert(stokvelMembers).values(member).returning();
+        january2026Members.push(createdMember);
+    }
+
+    const familyMemberMap = Object.fromEntries(familyMembers.map((member) => [member.name, member]));
+    const groceryMemberMap = Object.fromEntries(groceryMembers.map((member) => [member.name, member]));
+    const january2026MemberMap = Object.fromEntries(january2026Members.map((member) => [member.name, member]));
+
+    console.log('  → inserting stokvel payments');
+
+    const stokvelPaymentSeeds = [
+        {
+            stokvelId: familyStokvel.id,
+            memberId: familyMemberMap['Kabelo Maseko'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2024-09-01'),
+            period: 'September 2024',
+            status: 'paid',
+            notes: 'On-time contribution',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            memberId: familyMemberMap['Kabelo Maseko'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2024-10-01'),
+            period: 'October 2024',
+            status: 'paid',
+            notes: 'On-time contribution',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            memberId: familyMemberMap['Kabelo Maseko'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2024-11-01'),
+            period: 'November 2024',
+            status: 'paid',
+            notes: 'On-time contribution',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            memberId: familyMemberMap['Nandi Mokoena'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2024-09-02'),
+            period: 'September 2024',
+            status: 'paid',
+            notes: 'Paid via EFT',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            memberId: familyMemberMap['Nandi Mokoena'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2024-10-02'),
+            period: 'October 2024',
+            status: 'paid',
+            notes: 'Paid via EFT',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            memberId: familyMemberMap['Nandi Mokoena'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2024-11-02'),
+            period: 'November 2024',
+            status: 'paid',
+            notes: 'Paid via EFT',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            memberId: familyMemberMap['Thuso Mbele'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2024-09-05'),
+            period: 'September 2024',
+            status: 'paid',
+            notes: 'Cash deposit',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            memberId: familyMemberMap['Thuso Mbele'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2024-10-05'),
+            period: 'October 2024',
+            status: 'paid',
+            notes: 'Cash deposit',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            memberId: familyMemberMap['Zanele Dube'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2024-09-03'),
+            period: 'September 2024',
+            status: 'paid',
+            notes: 'Salary day contribution',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            memberId: familyMemberMap['Zanele Dube'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2024-10-03'),
+            period: 'October 2024',
+            status: 'paid',
+            notes: 'Salary day contribution',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            memberId: familyMemberMap['Zanele Dube'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2024-11-03'),
+            period: 'November 2024',
+            status: 'paid',
+            notes: 'Salary day contribution',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            memberId: familyMemberMap['Brian Ndlovu'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2024-09-12'),
+            period: 'September 2024',
+            status: 'paid',
+            notes: 'Only contribution received this quarter',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            memberId: familyMemberMap['Lindiwe Khosa'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2024-09-08'),
+            period: 'September 2024',
+            status: 'paid',
+            notes: 'Paid at meeting',
+        },
+        {
+            stokvelId: familyStokvel.id,
+            memberId: familyMemberMap['Lindiwe Khosa'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2024-10-08'),
+            period: 'October 2024',
+            status: 'paid',
+            notes: 'Paid at meeting',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Precious Hadebe'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-09-04'),
+            period: 'September 2024',
+            status: 'paid',
+            notes: 'Bulk grocery cycle',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Precious Hadebe'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-10-04'),
+            period: 'October 2024',
+            status: 'paid',
+            notes: 'Bulk grocery cycle',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Precious Hadebe'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-11-04'),
+            period: 'November 2024',
+            status: 'paid',
+            notes: 'Bulk grocery cycle',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Sizwe Mthembu'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-09-06'),
+            period: 'September 2024',
+            status: 'paid',
+            notes: 'Late but received',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Sizwe Mthembu'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-11-06'),
+            period: 'November 2024',
+            status: 'paid',
+            notes: 'October missed',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Boitumelo Seabi'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-09-07'),
+            period: 'September 2024',
+            status: 'paid',
+            notes: 'Standing order',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Boitumelo Seabi'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-10-07'),
+            period: 'October 2024',
+            status: 'paid',
+            notes: 'Standing order',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Boitumelo Seabi'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-11-07'),
+            period: 'November 2024',
+            status: 'paid',
+            notes: 'Standing order',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Anele Tshabalala'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-09-09'),
+            period: 'September 2024',
+            status: 'paid',
+            notes: 'Paid before meeting',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Anele Tshabalala'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-10-09'),
+            period: 'October 2024',
+            status: 'paid',
+            notes: 'Paid before meeting',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Anele Tshabalala'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-11-09'),
+            period: 'November 2024',
+            status: 'paid',
+            notes: 'Paid before meeting',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Lebo Radebe'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-09-11'),
+            period: 'September 2024',
+            status: 'paid',
+            notes: 'Partial season participation',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Lebo Radebe'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-11-11'),
+            period: 'November 2024',
+            status: 'paid',
+            notes: 'October missed',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Yandiswa Gqirana'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-09-13'),
+            period: 'September 2024',
+            status: 'paid',
+            notes: 'Paid in cash',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Yandiswa Gqirana'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-10-13'),
+            period: 'October 2024',
+            status: 'paid',
+            notes: 'Paid in cash',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Yandiswa Gqirana'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-11-13'),
+            period: 'November 2024',
+            status: 'paid',
+            notes: 'Paid in cash',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Mpho Pheko'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-09-20'),
+            period: 'September 2024',
+            status: 'paid',
+            notes: 'Stopped after first cycle',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Karabo Mohlala'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-09-21'),
+            period: 'September 2024',
+            status: 'paid',
+            notes: 'Standing order',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Karabo Mohlala'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-10-21'),
+            period: 'October 2024',
+            status: 'paid',
+            notes: 'Standing order',
+        },
+        {
+            stokvelId: groceryStokvel.id,
+            memberId: groceryMemberMap['Karabo Mohlala'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '750.00',
+            date: d('2024-11-21'),
+            period: 'November 2024',
+            status: 'paid',
+            notes: 'Standing order',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            memberId: january2026MemberMap['Lerato Mokoena'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2026-01-03'),
+            period: 'January 2026',
+            status: 'paid',
+            notes: 'On-time contribution',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            memberId: january2026MemberMap['Lerato Mokoena'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2026-02-03'),
+            period: 'February 2026',
+            status: 'paid',
+            notes: 'On-time contribution',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            memberId: january2026MemberMap['Lerato Mokoena'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2026-03-03'),
+            period: 'March 2026',
+            status: 'paid',
+            notes: 'On-time contribution',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            memberId: january2026MemberMap['Sipho Ndlovu'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2026-02-05'),
+            period: 'February 2026',
+            status: 'paid',
+            notes: 'Skipped January, paid February',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            memberId: january2026MemberMap['Sipho Ndlovu'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2026-03-05'),
+            period: 'March 2026',
+            status: 'paid',
+            notes: 'Paid current cycle',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            memberId: january2026MemberMap['Ayanda Khumalo'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2026-03-10'),
+            period: 'January 2026',
+            status: 'paid',
+            notes: 'January settled in March',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            memberId: january2026MemberMap['Ayanda Khumalo'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2026-03-10'),
+            period: 'February 2026',
+            status: 'paid',
+            notes: 'February settled in March',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            memberId: january2026MemberMap['Ayanda Khumalo'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2026-03-10'),
+            period: 'March 2026',
+            status: 'paid',
+            notes: 'March settled together with arrears',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            memberId: january2026MemberMap['Mpho Pheko'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2026-01-08'),
+            period: 'January 2026',
+            status: 'paid',
+            notes: 'Paid January only',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            memberId: january2026MemberMap['Zanele Dube'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2026-01-04'),
+            period: 'January 2026',
+            status: 'paid',
+            notes: 'On-time contribution',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            memberId: january2026MemberMap['Zanele Dube'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2026-02-04'),
+            period: 'February 2026',
+            status: 'paid',
+            notes: 'On-time contribution',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            memberId: january2026MemberMap['Zanele Dube'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2026-03-04'),
+            period: 'March 2026',
+            status: 'paid',
+            notes: 'On-time contribution',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            memberId: january2026MemberMap['Thando Molefe'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2026-01-12'),
+            period: 'January 2026',
+            status: 'paid',
+            notes: 'On-time contribution',
+        },
+        {
+            stokvelId: january2026Stokvel.id,
+            memberId: january2026MemberMap['Thando Molefe'].id,
+            organizationId: demoOrg.id,
+            userId: demoUser.id,
+            amount: '1000.00',
+            date: d('2026-02-12'),
+            period: 'February 2026',
+            status: 'paid',
+            notes: 'March still outstanding',
+        },
+    ];
+
+    for (const payment of stokvelPaymentSeeds) {
+        const [existingPayment] = await db.select().from(stokvelPayments).where(
+            and(
+                eq(stokvelPayments.stokvelId, payment.stokvelId),
+                eq(stokvelPayments.memberId, payment.memberId),
+                eq(stokvelPayments.period, payment.period),
+                eq(stokvelPayments.date, payment.date),
+            )
+        ).limit(1);
+
+        if (!existingPayment) {
+            await db.insert(stokvelPayments).values(payment);
+        }
+    }
+
+    // ── 8. Simple admin user transaction ─────
+
+    const [adminSeedTx] = await db.select().from(transactions).where(eq(transactions.reference, 'DEP-ADMIN-001')).limit(1);
+    if (!adminSeedTx) {
+        await db.insert(transactions).values({
+            organizationId: adminOrg.id,
+            userId: adminUser.id,
+            amount: '45000.00',
+            type: 'DEPOSIT',
+            category: 'Salary',
+            description: 'Initial account deposit',
+            reference: 'DEP-ADMIN-001',
+            toBalanceId: adminChecking.id,
+            date: d('2024-01-01'),
+        });
+    }
 
     console.log('✅  Seed complete!');
     console.log('');

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     Users,
     Plus,
@@ -16,148 +16,58 @@ import {
     UserPlus,
     Wallet,
     Eye,
+    CalendarDays,
 } from 'lucide-react';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils/formatters';
 import { toast } from '@/hooks/use-toast';
-
-// ============================================
-// TYPES
-// ============================================
-
-interface StokvelMember {
-    id: string;
-    name: string;
-    email?: string;
-    phone?: string;
-    joinedDate: string;
-    totalPaid: number;
-    totalOwed: number;
-    status: 'active' | 'inactive';
-}
-
-interface StokvelPayment {
-    id: string;
-    memberId: string;
-    memberName: string;
-    amount: number;
-    date: string;
-    period: string; // e.g., "January 2024"
-    status: 'paid' | 'pending' | 'late';
-    notes?: string;
-}
-
-interface Stokvel {
-    id: string;
-    name: string;
-    description: string;
-    contributionAmount: number;
-    frequency: 'weekly' | 'monthly' | 'quarterly';
-    startDate: string;
-    status: 'active' | 'completed' | 'paused';
-    members: StokvelMember[];
-    payments: StokvelPayment[];
-    totalCollected: number;
-    targetAmount?: number;
-}
-
-// ============================================
-// MOCK DATA
-// ============================================
-
-const mockStokvels: Stokvel[] = [
-    {
-        id: '1',
-        name: 'Family Savings Circle',
-        description: 'Monthly family savings for emergency fund',
-        contributionAmount: 1000,
-        frequency: 'monthly',
-        startDate: '2024-01-01',
-        status: 'active',
-        totalCollected: 15000,
-        targetAmount: 50000,
-        members: [
-            {
-                id: 'm1',
-                name: 'John Doe',
-                email: 'john@example.com',
-                phone: '0821234567',
-                joinedDate: '2024-01-01',
-                totalPaid: 5000,
-                totalOwed: 1000,
-                status: 'active',
-            },
-            {
-                id: 'm2',
-                name: 'Jane Smith',
-                email: 'jane@example.com',
-                phone: '0827654321',
-                joinedDate: '2024-01-01',
-                totalPaid: 6000,
-                totalOwed: 0,
-                status: 'active',
-            },
-            {
-                id: 'm3',
-                name: 'Peter Brown',
-                email: 'peter@example.com',
-                phone: '0823456789',
-                joinedDate: '2024-02-01',
-                totalPaid: 4000,
-                totalOwed: 1000,
-                status: 'active',
-            },
-        ],
-        payments: [
-            {
-                id: 'p1',
-                memberId: 'm1',
-                memberName: 'John Doe',
-                amount: 1000,
-                date: '2024-11-01',
-                period: 'November 2024',
-                status: 'paid',
-            },
-            {
-                id: 'p2',
-                memberId: 'm2',
-                memberName: 'Jane Smith',
-                amount: 1000,
-                date: '2024-11-02',
-                period: 'November 2024',
-                status: 'paid',
-            },
-            {
-                id: 'p3',
-                memberId: 'm3',
-                memberName: 'Peter Brown',
-                amount: 1000,
-                date: '2024-11-05',
-                period: 'November 2024',
-                status: 'pending',
-            },
-        ],
-    },
-];
-
-// ============================================
-// MAIN COMPONENT
-// ============================================
+import { api, useStokvels } from '@/lib/api';
+import type {
+    AddStokvelMemberRequest,
+    CreateStokvelRequest,
+    RecordStokvelPaymentRequest,
+    Stokvel,
+    StokvelFrequency,
+    StokvelStatus,
+} from '@/types';
+import { AddMemberDialog, RecordPaymentDialog } from './dialogs';
 
 const StokvelsPage: React.FC = () => {
-    const [stokvels, setStokvels] = useState<Stokvel[]>(mockStokvels);
-    const [selectedStokvel, setSelectedStokvel] = useState<Stokvel | null>(null);
+    const navigate = useNavigate();
+    const { data, isLoading } = useStokvels();
+    const stokvels: Stokvel[] = data?.stokvels || [];
+    const [selectedStokvelId, setSelectedStokvelId] = useState<string | null>(null);
 
-    // Dialog states
     const [createStokvelOpen, setCreateStokvelOpen] = useState(false);
     const [addMemberOpen, setAddMemberOpen] = useState(false);
     const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
-    const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
+
+    const selectedStokvel = stokvels.find((stokvel) => stokvel.id === selectedStokvelId) ?? null;
+
+    const totalMembers = stokvels.reduce((sum, stokvel) => sum + stokvel.members.length, 0);
+    const totalCollected = stokvels.reduce((sum, stokvel) => sum + parseFloat(stokvel.totalCollected || '0'), 0);
+    const activeGroups = stokvels.filter((stokvel) => stokvel.status === 'active').length;
+
+    const handleCreateStokvel = async (payload: CreateStokvelRequest) => {
+        await api.createStokvel(payload);
+        toast({ title: "Success", description: "Stokvel created successfully!" });
+    };
+
+    const handleAddMember = async (payload: AddStokvelMemberRequest) => {
+        if (!selectedStokvelId) return;
+        await api.addStokvelMember(selectedStokvelId, payload);
+        toast({ title: "Success", description: "Member added successfully!" });
+    };
+
+    const handleRecordPayment = async (payload: RecordStokvelPaymentRequest) => {
+        if (!selectedStokvelId) return;
+        await api.recordStokvelPayment(selectedStokvelId, payload);
+        toast({ title: "Success", description: "Payment recorded successfully!" });
+    };
 
     return (
         <div className="container mx-auto p-6 max-w-7xl">
-            {/* Header */}
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
@@ -176,7 +86,6 @@ const StokvelsPage: React.FC = () => {
                 </Button>
             </div>
 
-            {/* Stats Overview */}
             <div className="grid gap-6 md:grid-cols-4 mb-8">
                 <MetricCard
                     title="Total Groups"
@@ -185,151 +94,128 @@ const StokvelsPage: React.FC = () => {
                 />
                 <MetricCard
                     title="Total Members"
-                    value={stokvels.reduce((sum, s) => sum + s.members.length, 0)}
+                    value={totalMembers}
                     icon={<UserPlus className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
                 />
                 <MetricCard
                     title="Total Collected"
-                    value={formatCurrency(stokvels.reduce((sum, s) => sum + s.totalCollected, 0))}
+                    value={formatCurrency(totalCollected)}
                     icon={<TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />}
                 />
                 <MetricCard
                     title="Active Groups"
-                    value={stokvels.filter(s => s.status === 'active').length}
+                    value={activeGroups}
                     icon={<Wallet className="w-5 h-5 text-orange-600 dark:text-orange-400" />}
                 />
             </div>
 
-            {/* Stokvels List */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {stokvels.map((stokvel) => (
-                    <StokvelCard
-                        key={stokvel.id}
-                        stokvel={stokvel}
-                        onViewDetails={() => {
-                            setSelectedStokvel(stokvel);
-                            setViewDetailsOpen(true);
-                        }}
-                        onAddMember={() => {
-                            setSelectedStokvel(stokvel);
-                            setAddMemberOpen(true);
-                        }}
-                        onRecordPayment={() => {
-                            setSelectedStokvel(stokvel);
-                            setRecordPaymentOpen(true);
-                        }}
-                    />
-                ))}
-            </div>
+            {isLoading ? (
+                <div className="flex items-center justify-center h-[40vh]">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 dark:border-gray-700 border-t-emerald-600 dark:border-t-[#C4F546]" />
+                </div>
+            ) : (
+                <>
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        {stokvels.map((stokvel) => (
+                            <StokvelCard
+                                key={stokvel.id}
+                                stokvel={stokvel}
+                                onViewDetails={() => navigate(`/app/stokvel/${stokvel.id}`)}
+                                onAddMember={() => {
+                                    setSelectedStokvelId(stokvel.id);
+                                    setAddMemberOpen(true);
+                                }}
+                                onRecordPayment={() => {
+                                    setSelectedStokvelId(stokvel.id);
+                                    setRecordPaymentOpen(true);
+                                }}
+                            />
+                        ))}
+                    </div>
 
-            {/* Empty State */}
-            {stokvels.length === 0 && (
-                <Card className="border-2 border-dashed">
-                    <CardContent className="flex flex-col items-center justify-center py-12">
-                        <Users className="w-16 h-16 text-gray-400 mb-4" />
-                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                            No Stokvels Yet
-                        </h3>
-                        <p className="text-gray-600 dark:text-gray-400 mb-6 text-center max-w-md">
-                            Create your first stokvel to start managing group savings and contributions
-                        </p>
-                        <Button onClick={() => setCreateStokvelOpen(true)}>
-                            <Plus className="w-4 h-4 mr-2" />
-                            Create Your First Stokvel
-                        </Button>
-                    </CardContent>
-                </Card>
+                    {stokvels.length === 0 && (
+                        <Card className={cn(
+                            "backdrop-blur-xl bg-white/80 dark:bg-gray-900/80",
+                            "border border-gray-200/50 dark:border-gray-700/50",
+                            "rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/20"
+                        )}>
+                            <CardContent className="flex flex-col items-center justify-center py-16">
+                                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-6 shadow-lg">
+                                    <Users className="w-10 h-10 text-white" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                                    No Stokvels Yet
+                                </h3>
+                                <p className="text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
+                                    Start your first savings group and manage member contributions from one place.
+                                </p>
+                                <Button
+                                    onClick={() => setCreateStokvelOpen(true)}
+                                    className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                                >
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Create Your First Stokvel
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    )}
+                </>
             )}
 
-            {/* Dialogs */}
             <CreateStokvelDialog
                 open={createStokvelOpen}
                 onOpenChange={setCreateStokvelOpen}
-                onSave={(data) => {
-                    const newStokvel: Stokvel = {
-                        ...data,
-                        id: Date.now().toString(),
-                        members: [],
-                        payments: [],
-                        totalCollected: 0,
-                    };
-                    setStokvels([...stokvels, newStokvel]);
-                    toast({ title: "Success", description: "Stokvel created successfully!" });
-                }}
+                onSave={handleCreateStokvel}
             />
 
             <AddMemberDialog
                 open={addMemberOpen}
                 onOpenChange={setAddMemberOpen}
                 stokvel={selectedStokvel}
-                onSave={(memberData) => {
-                    if (!selectedStokvel) return;
-
-                    const newMember: StokvelMember = {
-                        ...memberData,
-                        id: Date.now().toString(),
-                        totalPaid: 0,
-                        totalOwed: 0,
-                        status: 'active',
-                    };
-
-                    setStokvels(stokvels.map(s =>
-                        s.id === selectedStokvel.id
-                            ? { ...s, members: [...s.members, newMember] }
-                            : s
-                    ));
-
-                    toast({ title: "Success", description: "Member added successfully!" });
-                }}
+                onSave={handleAddMember}
             />
 
             <RecordPaymentDialog
                 open={recordPaymentOpen}
                 onOpenChange={setRecordPaymentOpen}
                 stokvel={selectedStokvel}
-                onSave={(paymentData) => {
-                    if (!selectedStokvel) return;
-
-                    const member = selectedStokvel.members.find(m => m.id === paymentData.memberId);
-                    const newPayment: StokvelPayment = {
-                        ...paymentData,
-                        id: Date.now().toString(),
-                        memberName: member?.name || '',
-                        status: 'paid',
-                    };
-
-                    setStokvels(stokvels.map(s => {
-                        if (s.id === selectedStokvel.id) {
-                            return {
-                                ...s,
-                                payments: [...s.payments, newPayment],
-                                totalCollected: s.totalCollected + paymentData.amount,
-                                members: s.members.map(m =>
-                                    m.id === paymentData.memberId
-                                        ? { ...m, totalPaid: m.totalPaid + paymentData.amount }
-                                        : m
-                                ),
-                            };
-                        }
-                        return s;
-                    }));
-
-                    toast({ title: "Success", description: "Payment recorded successfully!" });
-                }}
-            />
-
-            <StokvelDetailsDialog
-                open={viewDetailsOpen}
-                onOpenChange={setViewDetailsOpen}
-                stokvel={selectedStokvel}
+                onSave={handleRecordPayment}
             />
         </div>
     );
 };
 
-// ============================================
-// STOKVEL CARD COMPONENT
-// ============================================
+function getCycleLabel(frequency: StokvelFrequency, count: number): string {
+    if (frequency === 'weekly') {
+        return `${count} week${count === 1 ? '' : 's'}`;
+    }
+    if (frequency === 'quarterly') {
+        return `${count} quarter${count === 1 ? '' : 's'}`;
+    }
+    return `${count} month${count === 1 ? '' : 's'}`;
+}
+
+function countPlannedCycles(startDate: string, targetDate: string, frequency: StokvelFrequency): number {
+    const start = new Date(startDate);
+    const end = new Date(targetDate);
+
+    if (Number.isNaN(+start) || Number.isNaN(+end) || end < start) {
+        return 0;
+    }
+
+    if (frequency === 'weekly') {
+        const diffDays = Math.floor((+end - +start) / (1000 * 60 * 60 * 24));
+        return Math.floor(diffDays / 7) + 1;
+    }
+
+    const monthDiff = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+
+    if (frequency === 'quarterly') {
+        return Math.floor(monthDiff / 3) + 1;
+    }
+
+    return monthDiff + 1;
+}
 
 interface StokvelCardProps {
     stokvel: Stokvel;
@@ -344,9 +230,10 @@ const StokvelCard: React.FC<StokvelCardProps> = ({
     onAddMember,
     onRecordPayment,
 }) => {
-    const progress = stokvel.targetAmount
-        ? (stokvel.totalCollected / stokvel.targetAmount) * 100
-        : 0;
+    const totalCollected = parseFloat(stokvel.totalCollected || '0');
+    const targetAmount = parseFloat(stokvel.targetAmount || '0');
+    const progress = targetAmount > 0 ? (totalCollected / targetAmount) * 100 : 0;
+    const plannedCycles = countPlannedCycles(stokvel.startDate, stokvel.targetDate, stokvel.frequency);
 
     return (
         <Card className={cn(
@@ -358,14 +245,10 @@ const StokvelCard: React.FC<StokvelCardProps> = ({
             "transition-all duration-300 hover:-translate-y-1",
             "group cursor-pointer"
         )}>
-            {/* Gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-gray-100/20 dark:to-gray-800/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-            {/* Decorative blur circle */}
             <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-gradient-to-br from-[#C4F546]/10 to-transparent dark:from-[#C4F546]/5 rounded-full blur-2xl" />
 
             <div className="relative z-10 space-y-4">
-                {/* Header */}
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-11 h-11 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-xl flex items-center justify-center shadow-inner">
@@ -392,26 +275,39 @@ const StokvelCard: React.FC<StokvelCardProps> = ({
                     </Badge>
                 </div>
 
-                {/* Stats */}
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-0.5">
                         <p className="text-xs text-gray-500 dark:text-gray-400">Contribution</p>
                         <p className="text-lg font-bold bg-gradient-to-br from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                            {formatCurrency(stokvel.contributionAmount)}
+                            {formatCurrency(parseFloat(stokvel.contributionAmount || '0'))}
                         </p>
                         <p className="text-xs text-gray-500 capitalize">{stokvel.frequency}</p>
                     </div>
                     <div className="space-y-0.5">
                         <p className="text-xs text-gray-500 dark:text-gray-400">Total Collected</p>
                         <p className="text-lg font-bold bg-gradient-to-br from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                            {formatCurrency(stokvel.totalCollected)}
+                            {formatCurrency(parseFloat(stokvel.totalCollected || '0'))}
                         </p>
                         <p className="text-xs text-gray-500">{stokvel.members.length} members</p>
                     </div>
                 </div>
 
-                {/* Progress Bar */}
-                {stokvel.targetAmount && (
+                <div className="grid grid-cols-2 gap-4 rounded-2xl border border-gray-200/60 dark:border-gray-700/40 bg-gray-50/70 dark:bg-gray-800/30 p-4">
+                    <div className="space-y-0.5">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Target Date</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {new Date(stokvel.targetDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                    </div>
+                    <div className="space-y-0.5">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Planned Duration</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {getCycleLabel(stokvel.frequency, plannedCycles)}
+                        </p>
+                    </div>
+                </div>
+
+                {targetAmount > 0 && (
                     <div className="space-y-1.5">
                         <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                             <span>Progress</span>
@@ -424,12 +320,11 @@ const StokvelCard: React.FC<StokvelCardProps> = ({
                             />
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Target: {formatCurrency(stokvel.targetAmount)}
+                            Target: {formatCurrency(parseFloat(stokvel.targetAmount || '0'))}
                         </p>
                     </div>
                 )}
 
-                {/* Actions */}
                 <div className="flex items-center justify-between pt-2 border-t border-gray-100/60 dark:border-gray-700/40">
                     <div className="flex items-center gap-1">
                         <Button
@@ -465,56 +360,77 @@ const StokvelCard: React.FC<StokvelCardProps> = ({
     );
 };
 
-// ============================================
-// CREATE STOKVEL DIALOG
-// ============================================
-
 interface CreateStokvelDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onSave: (data: Omit<Stokvel, 'id' | 'members' | 'payments' | 'totalCollected'>) => void;
+    onSave: (data: CreateStokvelRequest) => Promise<void>;
 }
 
 const CreateStokvelDialog: React.FC<CreateStokvelDialogProps> = ({ open, onOpenChange, onSave }) => {
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
         contributionAmount: '',
-        frequency: 'monthly' as 'weekly' | 'monthly' | 'quarterly',
+        frequency: 'monthly' as StokvelFrequency,
         startDate: new Date().toISOString().split('T')[0],
-        status: 'active' as 'active' | 'completed' | 'paused',
+        targetDate: new Date().toISOString().split('T')[0],
+        status: 'active' as StokvelStatus,
         targetAmount: '',
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const reset = () => setFormData({
+        name: '',
+        description: '',
+        contributionAmount: '',
+        frequency: 'monthly' as StokvelFrequency,
+        startDate: new Date().toISOString().split('T')[0],
+        targetDate: new Date().toISOString().split('T')[0],
+        status: 'active' as StokvelStatus,
+        targetAmount: '',
+    });
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!formData.name || !formData.contributionAmount) {
-            toast({ title: "Error", description: "Please fill in required fields", variant: "destructive" });
+        if (!formData.name || !formData.contributionAmount || !formData.targetAmount || !formData.startDate || !formData.targetDate) {
+            toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
             return;
         }
 
-        onSave({
-            name: formData.name,
-            description: formData.description,
-            contributionAmount: parseFloat(formData.contributionAmount),
-            frequency: formData.frequency,
-            startDate: formData.startDate,
-            status: formData.status,
-            targetAmount: formData.targetAmount ? parseFloat(formData.targetAmount) : undefined,
-        });
+        if (new Date(formData.targetDate) < new Date(formData.startDate)) {
+            toast({ title: "Error", description: "Target date must be on or after the start date", variant: "destructive" });
+            return;
+        }
 
-        setFormData({
-            name: '',
-            description: '',
-            contributionAmount: '',
-            frequency: 'monthly',
-            startDate: new Date().toISOString().split('T')[0],
-            status: 'active',
-            targetAmount: '',
-        });
-        onOpenChange(false);
+        try {
+            setIsSubmitting(true);
+            await onSave({
+                name: formData.name,
+                description: formData.description,
+                contributionAmount: formData.contributionAmount,
+                frequency: formData.frequency,
+                startDate: formData.startDate,
+                targetDate: formData.targetDate,
+                status: formData.status,
+                targetAmount: formData.targetAmount,
+            });
+            reset();
+            onOpenChange(false);
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: error instanceof Error ? error.message : "Failed to create stokvel",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
+
+    const plannedCycles = countPlannedCycles(formData.startDate, formData.targetDate, formData.frequency);
+    const targetAmount = parseFloat(formData.targetAmount || '0');
+    const estimatedPerCycle = plannedCycles > 0 && targetAmount > 0 ? targetAmount / plannedCycles : 0;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -574,7 +490,7 @@ const CreateStokvelDialog: React.FC<CreateStokvelDialogProps> = ({ open, onOpenC
                             <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Frequency *</Label>
                             <Select
                                 value={formData.frequency}
-                                onValueChange={(v) => setFormData({ ...formData, frequency: v as any })}
+                                onValueChange={(value) => setFormData({ ...formData, frequency: value as StokvelFrequency })}
                             >
                                 <SelectTrigger className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 dark:focus:ring-[#C4F546] text-gray-900 dark:text-white">
                                     <SelectValue />
@@ -592,7 +508,7 @@ const CreateStokvelDialog: React.FC<CreateStokvelDialogProps> = ({ open, onOpenC
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</Label>
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Date *</Label>
                             <Input
                                 type="date"
                                 value={formData.startDate}
@@ -602,7 +518,7 @@ const CreateStokvelDialog: React.FC<CreateStokvelDialogProps> = ({ open, onOpenC
                         </div>
 
                         <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Target Amount (Optional)</Label>
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Target Amount *</Label>
                             <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500">R</span>
                                 <Input
@@ -617,421 +533,53 @@ const CreateStokvelDialog: React.FC<CreateStokvelDialogProps> = ({ open, onOpenC
                         </div>
                     </div>
 
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Target Date *</Label>
+                            <Input
+                                type="date"
+                                value={formData.targetDate}
+                                min={formData.startDate}
+                                onChange={(e) => setFormData({ ...formData, targetDate: e.target.value })}
+                                className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white"
+                            />
+                        </div>
+
+                        <div className="rounded-2xl border border-emerald-200/70 dark:border-emerald-900/40 bg-emerald-50/70 dark:bg-emerald-900/10 p-4">
+                            <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                                <CalendarDays className="h-4 w-4" />
+                                <p className="text-sm font-semibold">Payment Plan</p>
+                            </div>
+                            <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                                {plannedCycles > 0 ? getCycleLabel(formData.frequency, plannedCycles) : 'Set a valid target date'}
+                            </p>
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {estimatedPerCycle > 0
+                                    ? `${formatCurrency(estimatedPerCycle)} total needed per cycle to reach the target amount`
+                                    : 'The target amount and target date determine how long the stokvel will run.'}
+                            </p>
+                        </div>
+                    </div>
+
                     <DialogFooter className="gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                         <Button
                             type="button"
                             variant="outline"
                             onClick={() => onOpenChange(false)}
+                            disabled={isSubmitting}
                             className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
                         >
                             Cancel
                         </Button>
                         <Button
                             type="submit"
+                            disabled={isSubmitting}
                             className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
                         >
                             Create Stokvel
                         </Button>
                     </DialogFooter>
                 </form>
-            </DialogContent>
-        </Dialog>
-    );
-};
-
-// ============================================
-// ADD MEMBER DIALOG
-// ============================================
-
-interface AddMemberDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    stokvel: Stokvel | null;
-    onSave: (data: Omit<StokvelMember, 'id' | 'totalPaid' | 'totalOwed' | 'status'>) => void;
-}
-
-const AddMemberDialog: React.FC<AddMemberDialogProps> = ({ open, onOpenChange, stokvel, onSave }) => {
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        phone: '',
-        joinedDate: new Date().toISOString().split('T')[0],
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!formData.name) {
-            toast({ title: "Error", description: "Member name is required", variant: "destructive" });
-            return;
-        }
-
-        onSave(formData);
-        setFormData({ name: '', email: '', phone: '', joinedDate: new Date().toISOString().split('T')[0] });
-        onOpenChange(false);
-    };
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className={cn(
-                "sm:max-w-[450px]",
-                "backdrop-blur-xl bg-white/95 dark:bg-gray-900/95",
-                "border border-gray-200/50 dark:border-gray-700/50",
-                "shadow-2xl dark:shadow-black/40"
-            )}>
-                <DialogHeader>
-                    <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        Add Member
-                    </DialogTitle>
-                    <DialogDescription className="text-gray-600 dark:text-gray-400">
-                        Add a new member to {stokvel?.name}
-                    </DialogDescription>
-                </DialogHeader>
-
-                <form onSubmit={handleSubmit} className="space-y-5 mt-2">
-                    <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Full Name *</Label>
-                        <Input
-                            placeholder="John Doe"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email (Optional)</Label>
-                            <Input
-                                type="email"
-                                placeholder="john@example.com"
-                                value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone (Optional)</Label>
-                            <Input
-                                type="tel"
-                                placeholder="0821234567"
-                                value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Join Date</Label>
-                        <Input
-                            type="date"
-                            value={formData.joinedDate}
-                            onChange={(e) => setFormData({ ...formData, joinedDate: e.target.value })}
-                            className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white"
-                        />
-                    </div>
-
-                    <DialogFooter className="gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => onOpenChange(false)}
-                            className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                        >
-                            Add Member
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
-    );
-};
-
-// ============================================
-// RECORD PAYMENT DIALOG
-// ============================================
-
-interface RecordPaymentDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    stokvel: Stokvel | null;
-    onSave: (data: Omit<StokvelPayment, 'id' | 'memberName' | 'status'>) => void;
-}
-
-const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({ open, onOpenChange, stokvel, onSave }) => {
-    const [formData, setFormData] = useState({
-        memberId: '',
-        amount: '',
-        date: new Date().toISOString().split('T')[0],
-        period: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-        notes: '',
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!formData.memberId || !formData.amount) {
-            toast({ title: "Error", description: "Please select a member and enter amount", variant: "destructive" });
-            return;
-        }
-
-        onSave({
-            memberId: formData.memberId,
-            amount: parseFloat(formData.amount),
-            date: formData.date,
-            period: formData.period,
-            notes: formData.notes,
-        });
-
-        setFormData({
-            memberId: '',
-            amount: '',
-            date: new Date().toISOString().split('T')[0],
-            period: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-            notes: '',
-        });
-        onOpenChange(false);
-    };
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className={cn(
-                "sm:max-w-[450px]",
-                "backdrop-blur-xl bg-white/95 dark:bg-gray-900/95",
-                "border border-gray-200/50 dark:border-gray-700/50",
-                "shadow-2xl dark:shadow-black/40"
-            )}>
-                <DialogHeader>
-                    <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        Record Payment
-                    </DialogTitle>
-                    <DialogDescription className="text-gray-600 dark:text-gray-400">
-                        Record a contribution for {stokvel?.name}
-                    </DialogDescription>
-                </DialogHeader>
-
-                <form onSubmit={handleSubmit} className="space-y-5 mt-2">
-                    <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Member *</Label>
-                        <Select
-                            value={formData.memberId}
-                            onValueChange={(v) => setFormData({ ...formData, memberId: v })}
-                        >
-                            <SelectTrigger className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 dark:focus:ring-[#C4F546] text-gray-900 dark:text-white">
-                                <SelectValue placeholder="Select member" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
-                                <SelectGroup>
-                                    {stokvel?.members.map((member) => (
-                                        <SelectItem key={member.id} value={member.id} className="focus:bg-gray-100 dark:focus:bg-gray-800">
-                                            {member.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Amount *</Label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500">R</span>
-                            <Input
-                                type="number"
-                                step="0.01"
-                                placeholder={stokvel?.contributionAmount.toString()}
-                                value={formData.amount}
-                                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                                className="pl-7 bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Date</Label>
-                            <Input
-                                type="date"
-                                value={formData.date}
-                                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Period</Label>
-                            <Input
-                                placeholder="November 2024"
-                                value={formData.period}
-                                onChange={(e) => setFormData({ ...formData, period: e.target.value })}
-                                className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes (Optional)</Label>
-                        <Input
-                            placeholder="Additional notes"
-                            value={formData.notes}
-                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                            className="bg-white dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-[#C4F546] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                        />
-                    </div>
-
-                    <DialogFooter className="gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => onOpenChange(false)}
-                            className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                        >
-                            Record Payment
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
-    );
-};
-
-// ============================================
-// STOKVEL DETAILS DIALOG
-// ============================================
-
-interface StokvelDetailsDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    stokvel: Stokvel | null;
-}
-
-const StokvelDetailsDialog: React.FC<StokvelDetailsDialogProps> = ({ open, onOpenChange, stokvel }) => {
-    if (!stokvel) return null;
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className={cn(
-                "sm:max-w-[680px] max-h-[85vh] overflow-y-auto",
-                "backdrop-blur-xl bg-white/95 dark:bg-gray-900/95",
-                "border border-gray-200/50 dark:border-gray-700/50",
-                "shadow-2xl dark:shadow-black/40"
-            )}>
-                <DialogHeader>
-                    <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        {stokvel.name}
-                    </DialogTitle>
-                    <DialogDescription className="text-gray-600 dark:text-gray-400">
-                        {stokvel.description}
-                    </DialogDescription>
-                </DialogHeader>
-
-                <Tabs defaultValue="members" className="mt-4">
-                    <TabsList className="grid w-full grid-cols-2 bg-gray-100/80 dark:bg-gray-800/80">
-                        <TabsTrigger value="members" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700">
-                            <Users className="w-4 h-4 mr-2" />
-                            Members
-                        </TabsTrigger>
-                        <TabsTrigger value="payments" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700">
-                            <DollarSign className="w-4 h-4 mr-2" />
-                            Payments
-                        </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="members" className="space-y-3 mt-4">
-                        {stokvel.members.map((member) => (
-                            <div
-                                key={member.id}
-                                className="flex items-center justify-between p-4 rounded-xl bg-gray-50/80 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/40"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center shrink-0">
-                                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                            {member.name.charAt(0)}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{member.name}</p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            {member.email || member.phone || 'No contact info'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="text-right hidden sm:block">
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">Paid</p>
-                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{formatCurrency(member.totalPaid)}</p>
-                                    </div>
-                                    {member.totalOwed > 0 && (
-                                        <div className="text-right hidden sm:block">
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">Owed</p>
-                                            <p className="text-sm font-semibold text-orange-500 dark:text-orange-400">{formatCurrency(member.totalOwed)}</p>
-                                        </div>
-                                    )}
-                                    <Badge className={cn(
-                                        "text-xs font-semibold border-0",
-                                        member.status === 'active'
-                                            ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
-                                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
-                                    )}>
-                                        {member.status}
-                                    </Badge>
-                                </div>
-                            </div>
-                        ))}
-                    </TabsContent>
-
-                    <TabsContent value="payments" className="space-y-3 mt-4">
-                        {stokvel.payments.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-12 text-center rounded-xl bg-gray-50/80 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/40">
-                                <DollarSign className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-2" />
-                                <p className="text-sm text-gray-500 dark:text-gray-400">No payments recorded yet</p>
-                            </div>
-                        ) : (
-                            stokvel.payments.map((payment) => (
-                                <div
-                                    key={payment.id}
-                                    className="flex items-center justify-between p-4 rounded-xl bg-gray-50/80 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/40"
-                                >
-                                    <div>
-                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{payment.memberName}</p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">{payment.period}</p>
-                                        {payment.notes && (
-                                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{payment.notes}</p>
-                                        )}
-                                    </div>
-                                    <div className="text-right flex items-center gap-3">
-                                        <div>
-                                            <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                                                {formatCurrency(payment.amount)}
-                                            </p>
-                                            <p className="text-xs text-gray-400 dark:text-gray-500">{payment.date}</p>
-                                        </div>
-                                        <Badge className={cn(
-                                            "text-xs font-semibold border-0",
-                                            payment.status === 'paid' && "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400",
-                                            payment.status === 'pending' && "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400",
-                                            payment.status === 'late' && "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                                        )}>
-                                            {payment.status}
-                                        </Badge>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </TabsContent>
-                </Tabs>
             </DialogContent>
         </Dialog>
     );

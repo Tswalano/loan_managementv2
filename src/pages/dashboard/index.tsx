@@ -98,7 +98,7 @@ const DashboardCharts: React.FC = () => {
                 monthlyMap[monthKey].payments += amount;
                 monthlyMap[monthKey].income += amount;
                 monthlyMap[monthKey].interest += amount * 0.1;
-            } else if (transaction.type === 'EXPENSE') {
+            } else if (['EXPENSE', 'FEE', 'WITHDRAWAL'].includes(transaction.type)) {
                 monthlyMap[monthKey].expense += amount;
             } else {
                 monthlyMap[monthKey].income += amount;

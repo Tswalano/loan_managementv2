@@ -4,7 +4,6 @@ import {
     CardContent,
     CardHeader,
     CardTitle,
-    CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatPercent } from '@/lib/utils/formatters';
@@ -31,34 +30,6 @@ export default function LoanSummaryPage() {
     } = useFinanceData();
 
     const metrics = useMemo(() => calculateLoanMetrics(loans), [loans]);
-
-    const statusDistribution = [
-        {
-            name: 'Active',
-            value: loans.filter((loan: { status: string; }) => loan.status === 'ACTIVE').length,
-            color: '#10B981',
-            bgColor: 'from-emerald-500 to-emerald-600'
-        },
-        {
-            name: 'Paid',
-            value: loans.filter((loan: { status: string; }) => loan.status === 'PAID').length,
-            color: '#3B82F6',
-            bgColor: 'from-blue-500 to-blue-600'
-        },
-        {
-            name: 'Defaulted',
-            value: loans.filter((loan: { status: string; }) => loan.status === 'DEFAULTED').length,
-            color: '#EF4444',
-            bgColor: 'from-red-500 to-red-600'
-        },
-    ];
-
-    const loansBySize = [
-        { range: '< 999', count: loans.filter((loan: { principalAmount: string; }) => parseFloat(loan.principalAmount) <= 999).length },
-        { range: '1k - 1.9k', count: loans.filter((loan: { principalAmount: string; }) => parseFloat(loan.principalAmount) >= 1000 && parseFloat(loan.principalAmount) <= 1999).length },
-        { range: '2k - 3.9k', count: loans.filter((loan: { principalAmount: string; }) => parseFloat(loan.principalAmount) >= 2000 && parseFloat(loan.principalAmount) <= 3999).length },
-        { range: '4k+', count: loans.filter((loan: { principalAmount: string; }) => parseFloat(loan.principalAmount) >= 4000).length },
-    ];
 
     const handleCreateLoan = async (lData: CreateLoanRequest) => {
         try {
@@ -221,7 +192,7 @@ export default function LoanSummaryPage() {
                         className="backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/80"
                     >
                         <Download className="h-4 w-4 mr-2" />
-                        Export Excel
+                        Export
                     </Button>
                     <Button
                         size="sm"

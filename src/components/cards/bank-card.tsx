@@ -10,6 +10,7 @@ interface BankCardProps {
     accountNumber: string;
     bankName: string;
     currentBalance: string;
+    cardholderName?: string;
     onClick: () => void;
 }
 
@@ -101,6 +102,7 @@ export const BankCard: React.FC<BankCardProps> = ({
     accountNumber,
     bankName,
     currentBalance,
+    cardholderName,
     onClick
 }) => {
     const cardColor = BANK_COLORS[bankName as keyof typeof BANK_COLORS] || 'bg-gradient-to-br from-gray-900 to-black';
@@ -152,7 +154,7 @@ export const BankCard: React.FC<BankCardProps> = ({
                     </div>
                     <div>
                         <p className="text-xs font-medium text-white/50 uppercase tracking-wide">
-                            John Doe
+                            {cardholderName || 'Account Holder'}
                         </p>
                     </div>
                 </div>

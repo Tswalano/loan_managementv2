@@ -52,6 +52,29 @@ export enum InvitationStatus {
     EXPIRED = 'EXPIRED'
 }
 
+export enum StokvelFrequency {
+    WEEKLY = 'weekly',
+    MONTHLY = 'monthly',
+    QUARTERLY = 'quarterly'
+}
+
+export enum StokvelStatus {
+    ACTIVE = 'active',
+    COMPLETED = 'completed',
+    PAUSED = 'paused'
+}
+
+export enum StokvelMemberStatus {
+    ACTIVE = 'active',
+    INACTIVE = 'inactive'
+}
+
+export enum StokvelPaymentStatus {
+    PAID = 'paid',
+    PENDING = 'pending',
+    LATE = 'late'
+}
+
 // ============================================
 // BASE ENTITIES
 // ============================================
@@ -86,6 +109,13 @@ export interface OrganizationMember {
     joinedAt: string;
     createdAt: string;
     updatedAt: string;
+}
+
+export interface OrganizationPermissionSet {
+    canViewStokvels?: boolean;
+    canManageStokvels?: boolean;
+    canAddStokvelMembers?: boolean;
+    canRecordStokvelPayments?: boolean;
 }
 
 export interface Invitation {
@@ -176,6 +206,58 @@ export interface LoanAccess {
     createdAt: string;
 }
 
+export interface StokvelMember {
+    id: string;
+    stokvelId: string;
+    organizationId: string;
+    userId: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    joinedDate: string;
+    totalPaid: string;
+    totalOwed: string;
+    status: StokvelMemberStatus;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface StokvelPayment {
+    id: string;
+    stokvelId: string;
+    memberId: string;
+    organizationId: string;
+    userId: string;
+    amount: string;
+    date: string;
+    period: string;
+    status: StokvelPaymentStatus;
+    notes: string | null;
+    createdAt: string;
+    member?: StokvelMember | null;
+    memberName?: string;
+}
+
+export interface Stokvel {
+    id: string;
+    organizationId: string;
+    userId: string;
+    name: string;
+    description: string | null;
+    contributionAmount: string;
+    frequency: StokvelFrequency;
+    startDate: string;
+    targetDate: string;
+    status: StokvelStatus;
+    targetAmount: string | null;
+    totalCollected: string;
+    metadata: Record<string, any>;
+    createdAt: string;
+    updatedAt: string;
+    members: StokvelMember[];
+    payments: StokvelPayment[];
+}
+
 export interface AuditLog {
     id: string;
     organizationId: string;
@@ -220,6 +302,7 @@ export interface MeResponse {
         id: string;
         name: string;
         role: UserRole;
+        permissions: OrganizationPermissionSet;
         joinedAt: string;
     }>;
 }
@@ -227,12 +310,21 @@ export interface MeResponse {
 export interface OrganizationResponse {
     success: boolean;
     organization: Organization & {
+        currentMember?: {
+            id: string;
+            userId: string;
+            role: UserRole;
+            permissions: OrganizationPermissionSet;
+            joinedAt: string;
+        } | null;
         members: Array<{
+            id: string;
             userId: string;
             email: string;
             firstName: string | null;
             lastName: string | null;
             role: UserRole;
+            permissions: OrganizationPermissionSet;
             joinedAt: string;
         }>;
     };
@@ -271,6 +363,15 @@ export interface LoanResponse {
         balance?: Balance;
         transactions?: Transaction[];
     }>;
+    message?: string;
+}
+
+export interface StokvelResponse {
+    success: boolean;
+    stokvel?: Stokvel;
+    stokvels?: Stokvel[];
+    member?: StokvelMember;
+    payment?: StokvelPayment;
     message?: string;
 }
 
@@ -359,6 +460,34 @@ export interface LoanPaymentRequest {
     description?: string;
 }
 
+export interface CreateStokvelRequest {
+    name: string;
+    description?: string;
+    contributionAmount: string | number;
+    frequency: StokvelFrequency;
+    startDate: string;
+    targetDate: string;
+    status?: StokvelStatus;
+    targetAmount: string | number;
+    metadata?: Record<string, any>;
+}
+
+export interface AddStokvelMemberRequest {
+    name: string;
+    email?: string;
+    phone?: string;
+    joinedDate: string;
+}
+
+export interface RecordStokvelPaymentRequest {
+    memberId: string;
+    amount: string | number;
+    date: string;
+    period: string;
+    status?: StokvelPaymentStatus;
+    notes?: string;
+}
+
 export interface InviteUserRequest {
     email: string;
     role: UserRole;
@@ -379,6 +508,10 @@ export interface UpdateOrganizationRequest {
 
 export interface UpdateMemberRoleRequest {
     role: UserRole;
+}
+
+export interface UpdateMemberPermissionsRequest {
+    permissions: OrganizationPermissionSet;
 }
 
 // ============================================
@@ -414,41 +547,65 @@ export const RolePermissions: Record<UserRole, {
     canManageLoans: boolean;
     canManageTransactions: boolean;
     canView: boolean;
+    canViewStokvels: boolean;
+    canManageStokvels: boolean;
+    canAddStokvelMembers: boolean;
+    canRecordStokvelPayments: boolean;
 }> = {
     [UserRole.OWNER]: {
         canManageOrg: true,
         canManageUsers: true,
         canManageLoans: true,
         canManageTransactions: true,
-        canView: true
+        canView: true,
+        canViewStokvels: true,
+        canManageStokvels: true,
+        canAddStokvelMembers: true,
+        canRecordStokvelPayments: true
     },
     [UserRole.ADMIN]: {
         canManageOrg: false,
         canManageUsers: true,
         canManageLoans: true,
         canManageTransactions: true,
-        canView: true
+        canView: true,
+        canViewStokvels: true,
+        canManageStokvels: true,
+        canAddStokvelMembers: true,
+        canRecordStokvelPayments: true
     },
     [UserRole.MANAGER]: {
         canManageOrg: false,
         canManageUsers: false,
         canManageLoans: true,
         canManageTransactions: true,
-        canView: true
+        canView: true,
+        canViewStokvels: true,
+        canManageStokvels: true,
+        canAddStokvelMembers: true,
+        canRecordStokvelPayments: true
     },
     [UserRole.ACCOUNTANT]: {
         canManageOrg: false,
         canManageUsers: false,
         canManageLoans: false,
         canManageTransactions: true,
-        canView: true
+        canView: true,
+        canViewStokvels: true,
+        canManageStokvels: false,
+        canAddStokvelMembers: false,
+        canRecordStokvelPayments: true
     },
     [UserRole.VIEWER]: {
         canManageOrg: false,
         canManageUsers: false,
         canManageLoans: false,
         canManageTransactions: false,
-        canView: true
+        canView: true,
+        canViewStokvels: true,
+        canManageStokvels: false,
+        canAddStokvelMembers: false,
+        canRecordStokvelPayments: false
     }
 };
 

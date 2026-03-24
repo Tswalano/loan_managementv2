@@ -24,7 +24,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, ChevronLeft, ChevronRight, Filter, FileSpreadsheet, X, Calendar } from 'lucide-react';
+import { Plus, Search, ChevronLeft, ChevronRight, Filter, Download, X, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { formatCurrency, formatShortDate, maskAccountLast8Grouped, truncateText } from '@/lib/utils/formatters';
 import { CreateTransactionRequest, Transaction, TransactionType } from '@/types';
@@ -36,6 +36,7 @@ import { api, useFinanceData } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 type TransactionFilter = 'ALL' | 'LOAN' | 'INCOME' | 'TRANSFER' | 'EXPENSE';
+type TransactionFlow = 'income' | 'expense' | 'transfer';
 
 export default function TransactionsPage() {
     const { toast } = useToast();
@@ -106,14 +107,32 @@ export default function TransactionsPage() {
         }
     };
 
-    const getTypeColor = (type: TransactionType): string => {
-        const colors: Partial<Record<TransactionType, string>> = {
-            INCOME: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-            EXPENSE: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-            LOAN_PAYMENT: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-            LOAN_DISBURSEMENT: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-        };
-        return colors[type] ?? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
+    const getTransactionFlow = (type: TransactionType): TransactionFlow => {
+        if ([TransactionType.INCOME, TransactionType.INTEREST, TransactionType.DEPOSIT, TransactionType.LOAN_PAYMENT].includes(type)) {
+            return 'income';
+        }
+        if (type === TransactionType.TRANSFER) {
+            return 'transfer';
+        }
+        return 'expense';
+    };
+
+    const getFlowLabel = (type: TransactionType): string => {
+        const flow = getTransactionFlow(type);
+        if (flow === 'income') return 'Income';
+        if (flow === 'expense') return 'Expense';
+        return 'Transfer';
+    };
+
+    const getFlowColor = (type: TransactionType): string => {
+        const flow = getTransactionFlow(type);
+        if (flow === 'income') {
+            return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+        }
+        if (flow === 'expense') {
+            return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+        }
+        return 'bg-slate-100 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300';
     };
 
     const matchesSelectedFilter = (type: TransactionType) => {
@@ -293,8 +312,8 @@ export default function TransactionsPage() {
                         onClick={exportToExcel}
                         className="backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border border-gray-200/50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-800/80"
                     >
-                        <FileSpreadsheet className="h-4 w-4 mr-2" />
-                        Export Excel
+                        <Download className="h-4 w-4 mr-2" />
+                        Export
                     </Button>
                     <Button
                         size="sm"
@@ -497,24 +516,22 @@ export default function TransactionsPage() {
                                             <TableCell>
                                                 <span className={cn(
                                                     "px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1",
-                                                    getTypeColor(transaction.type)
+                                                    getFlowColor(transaction.type)
                                                 )}>
                                                     <div className={cn(
                                                         "w-1.5 h-1.5 rounded-full",
-                                                        transaction.type === 'INCOME' && "bg-emerald-600 dark:bg-emerald-400",
-                                                        transaction.type === 'EXPENSE' && "bg-orange-600 dark:bg-orange-400",
-                                                        transaction.type === 'LOAN_PAYMENT' && "bg-yellow-600 dark:bg-yellow-400",
-                                                        transaction.type === 'LOAN_DISBURSEMENT' && "bg-red-600 dark:bg-red-400",
-                                                        transaction.type === 'TRANSFER' && "bg-lime-600 dark:bg-lime-400"
+                                                        getTransactionFlow(transaction.type) === 'income' && "bg-emerald-600 dark:bg-emerald-400",
+                                                        getTransactionFlow(transaction.type) === 'expense' && "bg-red-600 dark:bg-red-400",
+                                                        getTransactionFlow(transaction.type) === 'transfer' && "bg-slate-500 dark:bg-slate-400"
                                                     )} />
-                                                    {transaction.type.replace('_', ' ')}
+                                                    {getFlowLabel(transaction.type)}
                                                 </span>
                                             </TableCell>
                                             <TableCell className={cn(
                                                 "text-right font-bold",
-                                                ['INCOME', 'LOAN_PAYMENT'].includes(transaction.type)
-                                                    ? 'text-emerald-600 dark:text-emerald-400'
-                                                    : 'text-red-600 dark:text-red-400'
+                                                getTransactionFlow(transaction.type) === 'income' && 'text-emerald-600 dark:text-emerald-400',
+                                                getTransactionFlow(transaction.type) === 'expense' && 'text-red-600 dark:text-red-400',
+                                                getTransactionFlow(transaction.type) === 'transfer' && 'text-slate-600 dark:text-slate-300'
                                             )}>
                                                 {formatCurrency(Number(transaction.amount) || 0)}
                                             </TableCell>

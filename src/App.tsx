@@ -17,6 +17,7 @@ import SettingsAndProfilePage from './pages/settings';
 import ContactSalesPage from './pages/contact-sales';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import StokvelPage from './pages/stokvel';
+import StokvelDetailsPage from './pages/stokvel/details';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -58,6 +59,7 @@ function AppRoutes() {
         <Route path="loans" element={<LoanSummaryPage />} />
         <Route path="bank-accounts" element={<AccountManagementPage />} />
         <Route path="stokvel" element={<StokvelPage />} />
+        <Route path="stokvel/:stokvelId" element={<StokvelDetailsPage />} />
         <Route path="settings" element={<SettingsAndProfilePage />} />
         {/* Catch all route for /app/* */}
         <Route path="*" element={<Navigate to="/app" replace />} />

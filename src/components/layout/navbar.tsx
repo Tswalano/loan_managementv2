@@ -37,7 +37,10 @@ export default function Navbar() {
     const navigate = useNavigate();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
-    const isActive = (path: string) => location.pathname === path;
+    const isActive = (path: string) => {
+        if (path === '/app') return location.pathname === path;
+        return location.pathname === path || location.pathname.startsWith(`${path}/`);
+    };
 
     const handleLogout = async () => {
         await clearAuth();

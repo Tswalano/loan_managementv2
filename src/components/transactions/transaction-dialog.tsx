@@ -23,7 +23,18 @@ interface ViewTransactionDialogProps {
 const ViewTransactionDialog = ({ transaction, open, onClose, onViewLoan }: ViewTransactionDialogProps) => {
     if (!transaction) return null;
 
-    const isIncome = transaction.type === 'INCOME' || transaction.type === 'LOAN_PAYMENT';
+    const getTransactionFlow = () => {
+        if (['INCOME', 'INTEREST', 'DEPOSIT', 'LOAN_PAYMENT'].includes(transaction.type)) {
+            return 'income';
+        }
+        if (transaction.type === 'TRANSFER') {
+            return 'transfer';
+        }
+        return 'expense';
+    };
+
+    const flow = getTransactionFlow();
+    const flowLabel = flow === 'income' ? 'Income' : flow === 'expense' ? 'Expense' : 'Transfer';
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
@@ -41,16 +52,18 @@ const ViewTransactionDialog = ({ transaction, open, onClose, onViewLoan }: ViewT
                         <span
                             className={cn(
                                 "px-3 py-1.5 rounded-full text-sm font-semibold inline-flex items-center gap-1.5",
-                                isIncome
-                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                flow === 'income' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+                                flow === 'expense' && 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+                                flow === 'transfer' && 'bg-slate-100 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300'
                             )}
                         >
                             <div className={cn(
                                 "w-1.5 h-1.5 rounded-full",
-                                isIncome ? "bg-emerald-600 dark:bg-emerald-400" : "bg-red-600 dark:bg-red-400"
+                                flow === 'income' && "bg-emerald-600 dark:bg-emerald-400",
+                                flow === 'expense' && "bg-red-600 dark:bg-red-400",
+                                flow === 'transfer' && "bg-slate-500 dark:bg-slate-400"
                             )} />
-                            {transaction.type.replace('_', ' ')}
+                            {flowLabel}
                         </span>
                     </div>
                     <DialogDescription className="text-gray-600 dark:text-gray-400">
@@ -63,9 +76,9 @@ const ViewTransactionDialog = ({ transaction, open, onClose, onViewLoan }: ViewT
                     <div className={cn(
                         "p-6 rounded-2xl",
                         "bg-gradient-to-br border",
-                        isIncome
-                            ? "from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-800/10 border-emerald-200 dark:border-emerald-800/30"
-                            : "from-red-50 to-red-100/50 dark:from-red-900/20 dark:to-red-800/10 border-red-200 dark:border-red-800/30"
+                        flow === 'income' && "from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-800/10 border-emerald-200 dark:border-emerald-800/30",
+                        flow === 'expense' && "from-red-50 to-red-100/50 dark:from-red-900/20 dark:to-red-800/10 border-red-200 dark:border-red-800/30",
+                        flow === 'transfer' && "from-slate-50 to-slate-100/50 dark:from-slate-900/20 dark:to-slate-800/20 border-slate-200 dark:border-slate-700/40"
                     )}>
                         <div className="flex items-center justify-between">
                             <div>
@@ -74,9 +87,9 @@ const ViewTransactionDialog = ({ transaction, open, onClose, onViewLoan }: ViewT
                                 </p>
                                 <p className={cn(
                                     "text-4xl font-bold",
-                                    isIncome
-                                        ? 'text-emerald-600 dark:text-emerald-400'
-                                        : 'text-red-600 dark:text-red-400'
+                                    flow === 'income' && 'text-emerald-600 dark:text-emerald-400',
+                                    flow === 'expense' && 'text-red-600 dark:text-red-400',
+                                    flow === 'transfer' && 'text-slate-700 dark:text-slate-200'
                                 )}>
                                     {formatCurrency(Number(transaction.amount))}
                                 </p>
@@ -84,14 +97,15 @@ const ViewTransactionDialog = ({ transaction, open, onClose, onViewLoan }: ViewT
                             {/* Icon based on transaction type */}
                             <div className={cn(
                                 "w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg",
-                                isIncome
-                                    ? 'bg-emerald-500 dark:bg-emerald-600'
-                                    : 'bg-red-500 dark:bg-red-600'
+                                flow === 'income' && 'bg-emerald-500 dark:bg-emerald-600',
+                                flow === 'expense' && 'bg-red-500 dark:bg-red-600',
+                                flow === 'transfer' && 'bg-slate-500 dark:bg-slate-600'
                             )}>
                                 {transaction.type === 'INCOME' && <ArrowUpRight className="h-8 w-8 text-white" />}
                                 {transaction.type === 'EXPENSE' && <ArrowDownRight className="h-8 w-8 text-white" />}
                                 {transaction.type === 'LOAN_PAYMENT' && <Banknote className="h-8 w-8 text-white" />}
                                 {transaction.type === 'LOAN_DISBURSEMENT' && <CreditCard className="h-8 w-8 text-white" />}
+                                {transaction.type === 'TRANSFER' && <ArrowUpRight className="h-8 w-8 text-white" />}
                             </div>
                         </div>
                     </div>

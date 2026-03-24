@@ -53,6 +53,10 @@ interface AccountFormData {
 
 export default function AccountManagementPage() {
     const user = getCurrentUser();
+    const cardholderName = user?.fullName
+        || [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim()
+        || user?.email
+        || 'Account Holder';
     const { data: balancesData, isLoading, refetch } = useBalances();
     const balances = useMemo(() => balancesData?.balances || [], [balancesData]);
 
@@ -368,6 +372,7 @@ export default function AccountManagementPage() {
                                 accountNumber={balance.accountNumber}
                                 bankName={balance.bankName}
                                 currentBalance={balance.balance}
+                                cardholderName={cardholderName}
                                 onClick={() => setSelectedAccount(balance)}
                             />
                         ))}

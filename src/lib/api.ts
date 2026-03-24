@@ -10,15 +10,22 @@ import type {
     Balance,
     Transaction,
     Loan,
+    Stokvel,
+    StokvelMember,
+    StokvelPayment,
     Organization,
     OrganizationMember,
     Invitation,
     AuditLog,
     User,
     UserRole,
+    OrganizationPermissionSet,
     AccountType,
     TransactionType,
     LoanStatus,
+    StokvelFrequency,
+    StokvelStatus,
+    StokvelPaymentStatus,
 } from '@/types';
 
 // Request types
@@ -83,6 +90,34 @@ export interface LoanPaymentRequest {
     description?: string;
 }
 
+export interface CreateStokvelRequest {
+    name: string;
+    description?: string;
+    contributionAmount: string | number;
+    frequency: StokvelFrequency;
+    startDate: string;
+    targetDate: string;
+    status?: StokvelStatus;
+    targetAmount: string | number;
+    metadata?: Record<string, any>;
+}
+
+export interface AddStokvelMemberRequest {
+    name: string;
+    email?: string;
+    phone?: string;
+    joinedDate: string;
+}
+
+export interface RecordStokvelPaymentRequest {
+    memberId: string;
+    amount: string | number;
+    date: string;
+    period: string;
+    status?: StokvelPaymentStatus;
+    notes?: string;
+}
+
 export interface InviteUserRequest {
     email: string;
     role: UserRole;
@@ -96,6 +131,10 @@ export interface UpdateOrganizationRequest {
 
 export interface UpdateMemberRoleRequest {
     role: UserRole;
+}
+
+export interface UpdateMemberPermissionsRequest {
+    permissions: OrganizationPermissionSet;
 }
 
 export interface GrantLoanAccessRequest {
@@ -317,6 +356,20 @@ class FinanceAPI {
         return result;
     }
 
+    async updateMemberPermissions(organizationId: string, memberId: string, data: UpdateMemberPermissionsRequest): Promise<ApiResponse<{ member: OrganizationMember }>> {
+        const res = await fetch(
+            `${this.baseUrl}/organizations/${organizationId}/members/${memberId}/permissions`,
+            {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(data),
+            }
+        );
+        const result = await handleResponse<ApiResponse<{ member: OrganizationMember }>>(res);
+        this.invalidateQueries([['organization', organizationId]]);
+        return result;
+    }
+
     // ============================================
     // BALANCES
     // ============================================
@@ -526,6 +579,50 @@ class FinanceAPI {
     }
 
     // ============================================
+    // STOKVELS
+    // ============================================
+
+    async getStokvels(): Promise<ApiResponse<{ stokvels: Stokvel[] }>> {
+        const res = await fetch(`${this.baseUrl}/stokvels`, {
+            headers: getAuthHeaders(),
+        });
+        return handleResponse(res);
+    }
+
+    async createStokvel(data: CreateStokvelRequest): Promise<ApiResponse<{ stokvel: Stokvel }>> {
+        const res = await fetch(`${this.baseUrl}/stokvels`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data),
+        });
+        const result = await handleResponse<ApiResponse<{ stokvel: Stokvel }>>(res);
+        this.invalidateQueries([['stokvels']]);
+        return result;
+    }
+
+    async addStokvelMember(stokvelId: string, data: AddStokvelMemberRequest): Promise<ApiResponse<{ member: StokvelMember }>> {
+        const res = await fetch(`${this.baseUrl}/stokvels/${stokvelId}/members`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data),
+        });
+        const result = await handleResponse<ApiResponse<{ member: StokvelMember }>>(res);
+        this.invalidateQueries([['stokvels']]);
+        return result;
+    }
+
+    async recordStokvelPayment(stokvelId: string, data: RecordStokvelPaymentRequest): Promise<ApiResponse<{ payment: StokvelPayment }>> {
+        const res = await fetch(`${this.baseUrl}/stokvels/${stokvelId}/payments`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data),
+        });
+        const result = await handleResponse<ApiResponse<{ payment: StokvelPayment }>>(res);
+        this.invalidateQueries([['stokvels']]);
+        return result;
+    }
+
+    // ============================================
     // REPORTS & ANALYTICS
     // ============================================
 
@@ -678,6 +775,16 @@ export function useAuditLogs(limit?: number) {
     });
 }
 
+export function useStokvels() {
+    const { data: userData } = useCurrentUser();
+
+    return useQuery({
+        queryKey: ['stokvels'],
+        queryFn: () => api.getStokvels(),
+        enabled: !!userData?.user,
+    });
+}
+
 // ============================================
 // HELPER FUNCTIONS FOR METRICS
 // ============================================
@@ -768,16 +875,22 @@ function computeMonthlyMetrics(
         // Update monthly data
         switch (transaction.type) {
             case 'INCOME':
+            case 'INTEREST':
+            case 'DEPOSIT':
                 monthly.income += amount;
                 break;
             case 'EXPENSE':
+            case 'FEE':
+            case 'WITHDRAWAL':
                 monthly.expense += amount;
                 break;
             case 'LOAN_PAYMENT':
+                monthly.income += amount;
                 monthly.loanPayment += amount;
                 loanTrend.payments += amount;
                 break;
             case 'LOAN_DISBURSEMENT':
+                monthly.expense += amount;
                 monthly.loanDisbursement += amount;
                 loanTrend.disbursements += amount;
                 break;

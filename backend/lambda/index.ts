@@ -14,7 +14,10 @@ import {
     transactions,
     loans,
     loanAccess,
-    auditLogs
+    auditLogs,
+    stokvels,
+    stokvelMembers,
+    stokvelPayments,
 } from '../db/schema';
 import { generateToken, verifyToken, hashPassword, verifyPassword } from './utils/auth';
 import { randomBytes } from 'crypto';
@@ -64,11 +67,11 @@ class AuthError extends Error {
 // ============================================
 
 const rolePermissions = {
-    OWNER: { canManageOrg: true, canManageUsers: true, canManageLoans: true, canManageTransactions: true, canView: true },
-    ADMIN: { canManageOrg: false, canManageUsers: true, canManageLoans: true, canManageTransactions: true, canView: true },
-    MANAGER: { canManageOrg: false, canManageUsers: false, canManageLoans: true, canManageTransactions: true, canView: true },
-    ACCOUNTANT: { canManageOrg: false, canManageUsers: false, canManageLoans: false, canManageTransactions: true, canView: true },
-    VIEWER: { canManageOrg: false, canManageUsers: false, canManageLoans: false, canManageTransactions: false, canView: true },
+    OWNER: { canManageOrg: true, canManageUsers: true, canManageLoans: true, canManageTransactions: true, canView: true, canViewStokvels: true, canManageStokvels: true, canAddStokvelMembers: true, canRecordStokvelPayments: true },
+    ADMIN: { canManageOrg: false, canManageUsers: true, canManageLoans: true, canManageTransactions: true, canView: true, canViewStokvels: true, canManageStokvels: true, canAddStokvelMembers: true, canRecordStokvelPayments: true },
+    MANAGER: { canManageOrg: false, canManageUsers: false, canManageLoans: true, canManageTransactions: true, canView: true, canViewStokvels: true, canManageStokvels: true, canAddStokvelMembers: true, canRecordStokvelPayments: true },
+    ACCOUNTANT: { canManageOrg: false, canManageUsers: false, canManageLoans: false, canManageTransactions: true, canView: true, canViewStokvels: true, canManageStokvels: false, canAddStokvelMembers: false, canRecordStokvelPayments: true },
+    VIEWER: { canManageOrg: false, canManageUsers: false, canManageLoans: false, canManageTransactions: false, canView: true, canViewStokvels: true, canManageStokvels: false, canAddStokvelMembers: false, canRecordStokvelPayments: false },
 };
 
 async function checkPermission(
@@ -86,6 +89,12 @@ async function checkPermission(
     if (!membership) return false;
 
     const permissions = rolePermissions[membership.role];
+    const customPermission = membership.permissions?.[requiredPermission];
+
+    if (typeof customPermission === 'boolean') {
+        return customPermission;
+    }
+
     return permissions[requiredPermission] || false;
 }
 
@@ -125,6 +134,118 @@ async function createAuditLog(
     } catch (error) {
         console.error('Failed to create audit log:', error);
     }
+}
+
+function serializeStokvel(stokvel: any) {
+    const payments = (stokvel.payments || []).map((payment: any) => ({
+        ...payment,
+        memberName: payment.member?.name || '',
+    }));
+
+    const totalCollected = payments.reduce((sum: number, payment: any) => {
+        return sum + parseFloat(String(payment.amount || 0));
+    }, 0);
+
+    return {
+        ...stokvel,
+        totalCollected: totalCollected.toFixed(2),
+        members: stokvel.members || [],
+        payments,
+    };
+}
+
+function startOfStokvelCycle(date: Date, frequency: string): Date {
+    const normalized = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    if (frequency === 'weekly') {
+        const day = normalized.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        normalized.setDate(normalized.getDate() + diff);
+        return new Date(normalized.getFullYear(), normalized.getMonth(), normalized.getDate());
+    }
+
+    if (frequency === 'quarterly') {
+        const quarterStartMonth = Math.floor(normalized.getMonth() / 3) * 3;
+        return new Date(normalized.getFullYear(), quarterStartMonth, 1);
+    }
+
+    return new Date(normalized.getFullYear(), normalized.getMonth(), 1);
+}
+
+function addStokvelCycle(date: Date, frequency: string): Date {
+    if (frequency === 'weekly') {
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate() + 7);
+    }
+
+    if (frequency === 'quarterly') {
+        return new Date(date.getFullYear(), date.getMonth() + 3, 1);
+    }
+
+    return new Date(date.getFullYear(), date.getMonth() + 1, 1);
+}
+
+function stokvelCycleKey(date: Date, frequency: string): string {
+    if (frequency === 'weekly') {
+        const start = startOfStokvelCycle(date, frequency);
+        return `${start.getFullYear()}-W-${start.toISOString().slice(0, 10)}`;
+    }
+
+    if (frequency === 'quarterly') {
+        const quarter = Math.floor(date.getMonth() / 3) + 1;
+        return `${date.getFullYear()}-Q${quarter}`;
+    }
+
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function stokvelCycleLabel(date: Date, frequency: string): string {
+    if (frequency === 'weekly') {
+        return `Week of ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    }
+
+    if (frequency === 'quarterly') {
+        const quarter = Math.floor(date.getMonth() / 3) + 1;
+        return `Q${quarter} ${date.getFullYear()}`;
+    }
+
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+function parseStokvelCycleDate(period: string | undefined, fallbackDate: Date, frequency: string): Date {
+    const normalizedPeriod = (period || '').trim();
+
+    if (frequency === 'monthly') {
+        const parsed = new Date(`${normalizedPeriod} 1`);
+        if (!Number.isNaN(+parsed)) {
+            return startOfStokvelCycle(parsed, frequency);
+        }
+    }
+
+    if (frequency === 'quarterly') {
+        const match = normalizedPeriod.match(/^Q([1-4])\s+(\d{4})$/i);
+        if (match) {
+            const quarter = Number(match[1]);
+            const year = Number(match[2]);
+            return new Date(year, (quarter - 1) * 3, 1);
+        }
+    }
+
+    if (frequency === 'weekly' && normalizedPeriod.toLowerCase().startsWith('week of ')) {
+        const parsed = new Date(normalizedPeriod.slice(8));
+        if (!Number.isNaN(+parsed)) {
+            return startOfStokvelCycle(parsed, frequency);
+        }
+    }
+
+    return startOfStokvelCycle(fallbackDate, frequency);
+}
+
+function buildDefaultStokvelPaymentNote(period: string, amount: number, isCurrent: boolean): string {
+    const formattedAmount = `R${amount.toFixed(2)}`;
+    if (isCurrent) {
+        return `On-time payment of ${formattedAmount} has been contributed.`;
+    }
+    return `${period} payment of ${formattedAmount} has been contributed.`;
 }
 
 // ============================================
@@ -461,6 +582,7 @@ app.get('/me', authenticate, async (c) => {
                 id: m.organization.id,
                 name: m.organization.name,
                 role: m.role,
+                permissions: m.permissions || {},
                 joinedAt: m.joinedAt,
             })),
         });
@@ -583,12 +705,23 @@ app.get('/organizations/:organizationId', authenticate, async (c) => {
             success: true,
             organization: {
                 ...organization,
+                currentMember: organization.members.find((m) => m.userId === userId)
+                    ? {
+                        id: organization.members.find((m) => m.userId === userId)!.id,
+                        userId,
+                        role: organization.members.find((m) => m.userId === userId)!.role,
+                        permissions: organization.members.find((m) => m.userId === userId)!.permissions || {},
+                        joinedAt: organization.members.find((m) => m.userId === userId)!.joinedAt,
+                    }
+                    : null,
                 members: organization.members.map(m => ({
+                    id: m.id,
                     userId: m.user.id,
                     email: m.user.email,
                     firstName: m.user.firstName,
                     lastName: m.user.lastName,
                     role: m.role,
+                    permissions: m.permissions || {},
                     joinedAt: m.joinedAt,
                 })),
             },
@@ -853,6 +986,58 @@ app.put('/organizations/:organizationId/members/:memberId/role', authenticate, a
         return c.json({
             success: true,
             message: 'Member role updated successfully',
+            member: updatedMember,
+        });
+    } catch (err) {
+        return c.json({
+            error: err instanceof Error ? err.message : 'An error occurred'
+        }, 500);
+    }
+});
+
+app.put('/organizations/:organizationId/members/:memberId/permissions', authenticate, async (c) => {
+    const organizationId = c.req.param('organizationId');
+    const memberId = c.req.param('memberId');
+    const userId = c.get('userId');
+
+    try {
+        const hasAccess = await checkPermission(userId, organizationId, 'canManageUsers');
+        if (!hasAccess) {
+            return c.json({ error: 'Access denied' }, 403);
+        }
+
+        const body = await c.req.json();
+        const permissions = body.permissions || {};
+
+        const [updatedMember] = await db
+            .update(organizationMembers)
+            .set({
+                permissions,
+                updatedAt: new Date(),
+            })
+            .where(and(
+                eq(organizationMembers.id, memberId),
+                eq(organizationMembers.organizationId, organizationId)
+            ))
+            .returning();
+
+        if (!updatedMember) {
+            return c.json({ error: 'Member not found' }, 404);
+        }
+
+        await createAuditLog(
+            organizationId,
+            userId,
+            'UPDATE_MEMBER_PERMISSIONS',
+            'organization_member',
+            memberId,
+            {},
+            updatedMember,
+        );
+
+        return c.json({
+            success: true,
+            message: 'Member permissions updated successfully',
             member: updatedMember,
         });
     } catch (err) {
@@ -1867,6 +2052,351 @@ app.delete('/loans/:loanId/revoke-access/:accessId', authenticate, async (c) => 
             success: true,
             message: 'Loan access revoked successfully',
         });
+    } catch (err) {
+        return c.json({
+            error: err instanceof Error ? err.message : 'An error occurred'
+        }, 500);
+    }
+});
+
+// ============================================
+// STOKVEL ROUTES
+// ============================================
+
+app.get('/stokvels', authenticate, async (c) => {
+    const userId = c.get('userId');
+    const organizationId = c.get('organizationId');
+
+    try {
+        if (!organizationId) {
+            return c.json({ error: 'Organization not found' }, 404);
+        }
+        const orgId = organizationId;
+
+        const hasAccess = await checkPermission(userId, orgId, 'canViewStokvels');
+        if (!hasAccess) {
+            return c.json({ error: 'Access denied' }, 403);
+        }
+
+        const organizationStokvels = await db.query.stokvels.findMany({
+            where: eq(stokvels.organizationId, orgId),
+            with: {
+                members: {
+                    orderBy: [desc(stokvelMembers.createdAt)],
+                },
+                payments: {
+                    with: {
+                        member: true,
+                    },
+                    orderBy: [desc(stokvelPayments.date)],
+                },
+            },
+            orderBy: [desc(stokvels.createdAt)],
+        });
+
+        return c.json({
+            success: true,
+            stokvels: organizationStokvels.map(serializeStokvel),
+        });
+    } catch (err) {
+        return c.json({
+            error: err instanceof Error ? err.message : 'An error occurred'
+        }, 500);
+    }
+});
+
+app.post('/stokvels', authenticate, async (c) => {
+    const userId = c.get('userId');
+    const organizationId = c.get('organizationId');
+
+    try {
+        if (!organizationId) {
+            return c.json({ error: 'Organization not found' }, 404);
+        }
+        const orgId = organizationId;
+
+        const hasAccess = await checkPermission(userId, orgId, 'canManageStokvels');
+        if (!hasAccess) {
+            return c.json({ error: 'Access denied' }, 403);
+        }
+
+        const body = await c.req.json();
+
+        if (!body.name || !body.contributionAmount || !body.frequency || !body.startDate || !body.targetAmount || !body.targetDate) {
+            return c.json({
+                error: 'name, contributionAmount, frequency, startDate, targetAmount, and targetDate are required'
+            }, 400);
+        }
+
+        const startDate = new Date(body.startDate);
+        const targetDate = new Date(body.targetDate);
+
+        if (Number.isNaN(+startDate) || Number.isNaN(+targetDate)) {
+            return c.json({ error: 'Invalid startDate or targetDate' }, 400);
+        }
+
+        if (targetDate < startDate) {
+            return c.json({ error: 'targetDate must be on or after startDate' }, 400);
+        }
+
+        const [newStokvel] = await db.insert(stokvels).values({
+            organizationId: orgId,
+            userId,
+            name: body.name,
+            description: body.description || null,
+            contributionAmount: String(body.contributionAmount),
+            frequency: body.frequency,
+            startDate,
+            targetDate,
+            status: body.status || 'active',
+            targetAmount: String(body.targetAmount),
+            metadata: body.metadata || {},
+        }).returning();
+
+        await createAuditLog(
+            orgId,
+            userId,
+            'CREATE_STOKVEL',
+            'stokvel',
+            newStokvel.id,
+            {},
+            newStokvel,
+        );
+
+        return c.json({
+            success: true,
+            message: 'Stokvel created successfully',
+            stokvel: {
+                ...newStokvel,
+                totalCollected: '0.00',
+                members: [],
+                payments: [],
+            },
+        }, 201);
+    } catch (err) {
+        return c.json({
+            error: err instanceof Error ? err.message : 'An error occurred'
+        }, 500);
+    }
+});
+
+app.post('/stokvels/:stokvelId/members', authenticate, async (c) => {
+    const stokvelId = c.req.param('stokvelId');
+    const userId = c.get('userId');
+    const organizationId = c.get('organizationId');
+
+    try {
+        if (!organizationId) {
+            return c.json({ error: 'Organization not found' }, 404);
+        }
+        const orgId = organizationId;
+
+        const hasAccess = await checkPermission(userId, orgId, 'canAddStokvelMembers');
+        if (!hasAccess) {
+            return c.json({ error: 'Access denied' }, 403);
+        }
+
+        const body = await c.req.json();
+
+        if (!body.name || !body.joinedDate) {
+            return c.json({ error: 'name and joinedDate are required' }, 400);
+        }
+
+        const stokvel = await db.query.stokvels.findFirst({
+            where: and(
+                eq(stokvels.id, stokvelId),
+                eq(stokvels.organizationId, orgId)
+            ),
+        });
+
+        if (!stokvel) {
+            return c.json({ error: 'Stokvel not found' }, 404);
+        }
+
+        const [member] = await db.insert(stokvelMembers).values({
+            stokvelId,
+            organizationId: orgId,
+            userId,
+            name: body.name,
+            email: body.email || null,
+            phone: body.phone || null,
+            joinedDate: new Date(body.joinedDate),
+            totalPaid: '0.00',
+            totalOwed: '0.00',
+            status: 'active',
+        }).returning();
+
+        await createAuditLog(
+            orgId,
+            userId,
+            'ADD_STOKVEL_MEMBER',
+            'stokvel_member',
+            member.id,
+            {},
+            member,
+        );
+
+        return c.json({
+            success: true,
+            message: 'Member added successfully',
+            member,
+        }, 201);
+    } catch (err) {
+        return c.json({
+            error: err instanceof Error ? err.message : 'An error occurred'
+        }, 500);
+    }
+});
+
+app.post('/stokvels/:stokvelId/payments', authenticate, async (c) => {
+    const stokvelId = c.req.param('stokvelId');
+    const userId = c.get('userId');
+    const organizationId = c.get('organizationId');
+
+    try {
+        if (!organizationId) {
+            return c.json({ error: 'Organization not found' }, 404);
+        }
+        const orgId = organizationId;
+
+        const hasAccess = await checkPermission(userId, orgId, 'canRecordStokvelPayments');
+        if (!hasAccess) {
+            return c.json({ error: 'Access denied' }, 403);
+        }
+
+        const body = await c.req.json();
+
+        if (!body.memberId || !body.amount || !body.date || !body.period) {
+            return c.json({ error: 'memberId, amount, date, and period are required' }, 400);
+        }
+
+        const amount = parseFloat(String(body.amount));
+        if (Number.isNaN(amount) || amount <= 0) {
+            return c.json({ error: 'amount must be greater than 0' }, 400);
+        }
+
+        const paymentDate = new Date(body.date);
+        if (Number.isNaN(+paymentDate)) {
+            return c.json({ error: 'Invalid payment date' }, 400);
+        }
+
+        const stokvel = await db.query.stokvels.findFirst({
+            where: and(
+                eq(stokvels.id, stokvelId),
+                eq(stokvels.organizationId, orgId)
+            ),
+        });
+
+        if (!stokvel) {
+            return c.json({ error: 'Stokvel not found' }, 404);
+        }
+
+        const member = await db.query.stokvelMembers.findFirst({
+            where: and(
+                eq(stokvelMembers.id, body.memberId),
+                eq(stokvelMembers.stokvelId, stokvelId),
+                eq(stokvelMembers.organizationId, orgId)
+            ),
+        });
+
+        if (!member) {
+            return c.json({ error: 'Member not found' }, 404);
+        }
+
+        const frequency = stokvel.frequency;
+        const scheduleStart = startOfStokvelCycle(
+            new Date(Math.max(+new Date(stokvel.startDate), +new Date(member.joinedDate))),
+            frequency
+        );
+        const scheduleEnd = startOfStokvelCycle(new Date(stokvel.targetDate), frequency);
+        const dueEnd = startOfStokvelCycle(new Date(Math.min(+new Date(), +scheduleEnd)), frequency);
+        const currentCycle = startOfStokvelCycle(new Date(), frequency);
+        const submittedCycle = parseStokvelCycleDate(body.period, paymentDate, frequency);
+        const submittedCycleKey = stokvelCycleKey(submittedCycle, frequency);
+        const currentCycleKey = stokvelCycleKey(currentCycle, frequency);
+
+        const existingPayments = await db.query.stokvelPayments.findMany({
+            where: and(
+                eq(stokvelPayments.memberId, body.memberId),
+                eq(stokvelPayments.stokvelId, stokvelId),
+                eq(stokvelPayments.organizationId, orgId)
+            ),
+        });
+
+        const paidCycleKeys = new Set(
+            existingPayments.map((payment) =>
+                stokvelCycleKey(
+                    parseStokvelCycleDate(payment.period, new Date(payment.date), frequency),
+                    frequency
+                )
+            )
+        );
+
+        let oldestSkippedCycle: Date | null = null;
+        let cursor = new Date(scheduleStart);
+        while (cursor <= dueEnd) {
+            const key = stokvelCycleKey(cursor, frequency);
+            if (!paidCycleKeys.has(key)) {
+                oldestSkippedCycle = new Date(cursor);
+                break;
+            }
+            cursor = addStokvelCycle(cursor, frequency);
+        }
+
+        const resolvedCycle = oldestSkippedCycle && submittedCycleKey === currentCycleKey
+            ? oldestSkippedCycle
+            : submittedCycle;
+        const resolvedPeriod = stokvelCycleLabel(resolvedCycle, frequency);
+        const resolvedCycleKey = stokvelCycleKey(resolvedCycle, frequency);
+        const trimmedNotes = typeof body.notes === 'string' ? body.notes.trim() : '';
+        const generatedNote = buildDefaultStokvelPaymentNote(
+            resolvedPeriod,
+            amount,
+            resolvedCycleKey === currentCycleKey && !oldestSkippedCycle
+        );
+        const finalNote = trimmedNotes || generatedNote;
+
+        const [payment] = await db.transaction(async (trx) => {
+            const [newPayment] = await trx.insert(stokvelPayments).values({
+                stokvelId,
+                memberId: body.memberId,
+                organizationId: orgId,
+                userId,
+                amount: String(amount),
+                date: paymentDate,
+                period: resolvedPeriod,
+                status: body.status || 'paid',
+                notes: finalNote,
+            }).returning();
+
+            await trx.update(stokvelMembers)
+                .set({
+                    totalPaid: sql`${stokvelMembers.totalPaid} + ${String(amount)}`,
+                    updatedAt: new Date(),
+                })
+                .where(eq(stokvelMembers.id, body.memberId));
+
+            return [newPayment];
+        });
+
+        await createAuditLog(
+            orgId,
+            userId,
+            'RECORD_STOKVEL_PAYMENT',
+            'stokvel_payment',
+            payment.id,
+            {},
+            payment,
+        );
+
+        return c.json({
+            success: true,
+            message: 'Payment recorded successfully',
+            payment: {
+                ...payment,
+                memberName: member.name,
+            },
+        }, 201);
     } catch (err) {
         return c.json({
             error: err instanceof Error ? err.message : 'An error occurred'
