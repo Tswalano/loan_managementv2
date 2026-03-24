@@ -15,6 +15,9 @@ import {
     stokvelPayments,
 } from './schema';
 
+type StokvelMemberInsert = typeof stokvelMembers.$inferInsert;
+type StokvelPaymentInsert = typeof stokvelPayments.$inferInsert;
+
 // ──────────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────────
@@ -871,7 +874,7 @@ const runSeed = async () => {
 
     console.log('  → inserting stokvel members');
 
-    const familyMemberSeeds = [
+    const familyMemberSeeds: StokvelMemberInsert[] = [
         {
             stokvelId: familyStokvel.id,
             organizationId: demoOrg.id,
@@ -964,7 +967,7 @@ const runSeed = async () => {
         familyMembers.push(createdMember);
     }
 
-    const groceryMemberSeeds = [
+    const groceryMemberSeeds: StokvelMemberInsert[] = [
         {
             stokvelId: groceryStokvel.id,
             organizationId: demoOrg.id,
@@ -1081,7 +1084,7 @@ const runSeed = async () => {
         groceryMembers.push(createdMember);
     }
 
-    const january2026MemberSeeds = [
+    const january2026MemberSeeds: StokvelMemberInsert[] = [
         {
             stokvelId: january2026Stokvel.id,
             organizationId: demoOrg.id,
@@ -1180,7 +1183,7 @@ const runSeed = async () => {
 
     console.log('  → inserting stokvel payments');
 
-    const stokvelPaymentSeeds = [
+    const stokvelPaymentSeeds: StokvelPaymentInsert[] = [
         {
             stokvelId: familyStokvel.id,
             memberId: familyMemberMap['Kabelo Maseko'].id,

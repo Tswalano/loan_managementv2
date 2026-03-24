@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { handle } from 'hono/aws-lambda';
 import { Context as HonoContext } from 'hono';
-import { eq, and, desc, sql, inArray } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { db } from '../db';
 import {
     users,
@@ -89,7 +89,8 @@ async function checkPermission(
     if (!membership) return false;
 
     const permissions = rolePermissions[membership.role];
-    const customPermission = membership.permissions?.[requiredPermission];
+    const customPermissions = (membership.permissions || {}) as Partial<typeof rolePermissions.OWNER>;
+    const customPermission = customPermissions[requiredPermission];
 
     if (typeof customPermission === 'boolean') {
         return customPermission;
@@ -685,12 +686,12 @@ app.put('/me/password', authenticate, async (c) => {
  * @access Private (Member)
  */
 app.get('/organizations/:organizationId', authenticate, async (c) => {
-    const organizationId = c.req.param('organizationId');
+    const organizationId = c.req.param('organizationId')!;
     const userId = c.get('userId');
 
     try {
         // Check if user is member
-        const hasAccess = await checkPermission(userId, organizationId, 'canViewLoans');
+        const hasAccess = await checkPermission(userId, organizationId, 'canView');
         if (!hasAccess) {
             return c.json({ error: 'Access denied' }, 403);
         }
@@ -752,7 +753,7 @@ app.get('/organizations/:organizationId', authenticate, async (c) => {
  * @access Private (Owner/Admin)
  */
 app.put('/organizations/:organizationId', authenticate, async (c) => {
-    const organizationId = c.req.param('organizationId');
+    const organizationId = c.req.param('organizationId')!;
     const userId = c.get('userId');
 
     try {
@@ -803,7 +804,7 @@ app.put('/organizations/:organizationId', authenticate, async (c) => {
  * @body {email, role}
  */
 app.post('/organizations/:organizationId/invite', authenticate, async (c) => {
-    const organizationId = c.req.param('organizationId');
+    const organizationId = c.req.param('organizationId')!;
     const userId = c.get('userId');
 
     try {
@@ -884,7 +885,7 @@ app.post('/organizations/:organizationId/invite', authenticate, async (c) => {
  * @access Private
  */
 app.post('/invitations/:token/accept', authenticate, async (c) => {
-    const token = c.req.param('token');
+    const token = c.req.param('token')!;
     const userId = c.get('userId');
 
     try {
@@ -962,8 +963,8 @@ app.post('/invitations/:token/accept', authenticate, async (c) => {
  * @access Private (Owner/Admin)
  */
 app.put('/organizations/:organizationId/members/:memberId/role', authenticate, async (c) => {
-    const organizationId = c.req.param('organizationId');
-    const memberId = c.req.param('memberId');
+    const organizationId = c.req.param('organizationId')!;
+    const memberId = c.req.param('memberId')!;
     const userId = c.get('userId');
 
     try {
@@ -1013,8 +1014,8 @@ app.put('/organizations/:organizationId/members/:memberId/role', authenticate, a
 });
 
 app.put('/organizations/:organizationId/members/:memberId/permissions', authenticate, async (c) => {
-    const organizationId = c.req.param('organizationId');
-    const memberId = c.req.param('memberId');
+    const organizationId = c.req.param('organizationId')!;
+    const memberId = c.req.param('memberId')!;
     const userId = c.get('userId');
 
     try {
@@ -1170,7 +1171,7 @@ app.get('/balances', authenticate, async (c) => {
  * @access Private (Manager+)
  */
 app.delete('/balances/:balanceId', authenticate, async (c) => {
-    const balanceId = c.req.param('balanceId');
+    const balanceId = c.req.param('balanceId')!;
     const userId = c.get('userId');
     const organizationId = c.get('organizationId');
 
@@ -1370,7 +1371,7 @@ app.get('/transactions', authenticate, async (c) => {
  * @access Private (All members)
  */
 app.get('/transactions/:transactionId', authenticate, async (c) => {
-    const transactionId = c.req.param('transactionId');
+    const transactionId = c.req.param('transactionId')!;
     const userId = c.get('userId');
     const organizationId = c.get('organizationId');
 
@@ -1422,7 +1423,7 @@ app.get('/transactions/:transactionId', authenticate, async (c) => {
  * @access Private (Accountant+)
  */
 app.delete('/transactions/:transactionId', authenticate, async (c) => {
-    const transactionId = c.req.param('transactionId');
+    const transactionId = c.req.param('transactionId')!;
     const userId = c.get('userId');
     const organizationId = c.get('organizationId');
 
@@ -1608,7 +1609,7 @@ app.get('/loans', authenticate, async (c) => {
  * @access Private (Based on loan access)
  */
 app.get('/loans/:loanId', authenticate, async (c) => {
-    const loanId = c.req.param('loanId');
+    const loanId = c.req.param('loanId')!;
     const userId = c.get('userId');
     const organizationId = c.get('organizationId');
 
@@ -1656,7 +1657,7 @@ app.get('/loans/:loanId', authenticate, async (c) => {
  * @access Private (Manager+)
  */
 app.put('/loans/:loanId', authenticate, async (c) => {
-    const loanId = c.req.param('loanId');
+    const loanId = c.req.param('loanId')!;
     const userId = c.get('userId');
     const organizationId = c.get('organizationId');
 
@@ -1719,7 +1720,7 @@ app.put('/loans/:loanId', authenticate, async (c) => {
  * @access Private (Manager+)
  */
 app.post('/loans/:loanId/disburse', authenticate, async (c) => {
-    const loanId = c.req.param('loanId');
+    const loanId = c.req.param('loanId')!;
     const userId = c.get('userId');
     const organizationId = c.get('organizationId');
 
@@ -1815,7 +1816,7 @@ app.post('/loans/:loanId/disburse', authenticate, async (c) => {
  * @access Private (Accountant+)
  */
 app.post('/loans/:loanId/payment', authenticate, async (c) => {
-    const loanId = c.req.param('loanId');
+    const loanId = c.req.param('loanId')!;
     const userId = c.get('userId');
     const organizationId = c.get('organizationId');
 
@@ -1905,7 +1906,7 @@ app.post('/loans/:loanId/payment', authenticate, async (c) => {
  * @access Private (Manager+)
  */
 app.post('/loans/:loanId/grant-access', authenticate, async (c) => {
-    const loanId = c.req.param('loanId');
+    const loanId = c.req.param('loanId')!;
     const userId = c.get('userId');
     const organizationId = c.get('organizationId');
 
@@ -1986,8 +1987,8 @@ app.post('/loans/:loanId/grant-access', authenticate, async (c) => {
  * @access Private (Manager+)
  */
 app.delete('/loans/:loanId/revoke-access/:accessId', authenticate, async (c) => {
-    const loanId = c.req.param('loanId');
-    const accessId = c.req.param('accessId');
+    const loanId = c.req.param('loanId')!;
+    const accessId = c.req.param('accessId')!;
     const userId = c.get('userId');
     const organizationId = c.get('organizationId');
 
@@ -2151,7 +2152,7 @@ app.post('/stokvels', authenticate, async (c) => {
 });
 
 app.post('/stokvels/:stokvelId/members', authenticate, async (c) => {
-    const stokvelId = c.req.param('stokvelId');
+    const stokvelId = c.req.param('stokvelId')!;
     const userId = c.get('userId');
     const organizationId = c.get('organizationId');
 
@@ -2219,7 +2220,7 @@ app.post('/stokvels/:stokvelId/members', authenticate, async (c) => {
 });
 
 app.post('/stokvels/:stokvelId/payments', authenticate, async (c) => {
-    const stokvelId = c.req.param('stokvelId');
+    const stokvelId = c.req.param('stokvelId')!;
     const userId = c.get('userId');
     const organizationId = c.get('organizationId');
 

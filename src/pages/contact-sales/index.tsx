@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Mail, Phone, Send, MapPin, PiggyBank, Check, MessageSquare, Zap, Clock } from 'lucide-react';
+import { Mail, Phone, Send, MapPin, Check, MessageSquare, Zap, Clock } from 'lucide-react';
 import Footer from '@/components/footer';
-import { Link } from 'react-router-dom';
+import LandingNavbar from '@/components/layout/landing-navbar';
 
 interface FormData {
     name: string;
@@ -106,36 +106,7 @@ const ContactSalesPage: React.FC = () => {
             <div className="fixed top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent z-50" />
 
             {/* Navigation */}
-            <nav className="relative z-40 py-5 px-4">
-                <div className="container mx-auto max-w-7xl">
-                    <div className="rounded-2xl bg-gray-900/80 backdrop-blur-xl border border-gray-700/60 shadow-[0_8px_32px_rgba(0,0,0,0.4)] px-6 py-4">
-                        <div className="flex justify-between items-center">
-                            <Link to="/" className="flex items-center gap-3 font-bold text-xl group">
-                                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
-                                    <PiggyBank className="h-5 w-5 text-emerald-400" />
-                                </div>
-                                <span className="bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                                    FinanceFlow
-                                </span>
-                            </Link>
-                            <div className="flex items-center gap-3">
-                                <Link
-                                    to="/"
-                                    className="hidden sm:block px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition-all duration-200"
-                                >
-                                    Back to home
-                                </Link>
-                                <a
-                                    href="/app"
-                                    className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_28px_rgba(16,185,129,0.45)] transition-all duration-300"
-                                >
-                                    Get started
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </nav>
+            <LandingNavbar variant="page" />
 
             {/* Main Content */}
             <main className="relative z-10 flex-1 py-16 md:py-24">
