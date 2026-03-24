@@ -20,6 +20,7 @@ import ContactSalesPage from './pages/contact-sales';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import StokvelPage from './pages/stokvel';
 import StokvelDetailsPage from './pages/stokvel/details';
+import ScrollToTop from './components/ScrollToTop';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -129,6 +130,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="loan-manager-theme">
         <Router>
+          <ScrollToTop />
           <AppRoutes />
           <Toaster />
         </Router>

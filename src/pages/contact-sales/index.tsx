@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Phone, Send, MapPin, Check, MessageSquare, Zap, Clock } from 'lucide-react';
+import { Mail, Phone, Send, MapPin, Check } from 'lucide-react';
 import Footer from '@/components/footer';
 import LandingNavbar from '@/components/layout/landing-navbar';
 
@@ -87,7 +87,7 @@ const ContactSalesPage: React.FC = () => {
         `w-full px-4 py-3.5 rounded-xl bg-gray-900/60 border ${hasError ? 'border-red-500/70' : 'border-gray-700/60'} text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all duration-200`;
 
     return (
-        <div className="relative min-h-screen bg-gray-950 text-white flex flex-col overflow-x-hidden">
+        <div className="min-h-screen bg-gray-950 text-white overflow-x-clip">
 
             {/* Fixed background layers */}
             <div className="fixed inset-0 pointer-events-none">
@@ -131,26 +131,6 @@ const ContactSalesPage: React.FC = () => {
                             <p className="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
                                 Have questions about FinanceFlow? We're here to help you manage your finances better.
                             </p>
-                        </div>
-
-                        {/* Quick stats row */}
-                        <div className="grid grid-cols-3 gap-4 mb-12 max-w-2xl mx-auto">
-                            {[
-                                { icon: Clock, label: '&lt; 24h', sub: 'Response time' },
-                                { icon: MessageSquare, label: '5★', sub: 'Support rating' },
-                                { icon: Zap, label: '24/7', sub: 'Available' },
-                            ].map(({ icon: Icon, label, sub }) => (
-                                <div key={sub} className="flex flex-col items-center gap-1 p-4 rounded-2xl bg-gray-900/50 border border-gray-700/50">
-                                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-1">
-                                        <Icon className="w-4 h-4 text-emerald-400" />
-                                    </div>
-                                    <span
-                                        className="text-base font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent"
-                                        dangerouslySetInnerHTML={{ __html: label }}
-                                    />
-                                    <span className="text-xs text-gray-500">{sub}</span>
-                                </div>
-                            ))}
                         </div>
 
                         {/* Section divider */}
