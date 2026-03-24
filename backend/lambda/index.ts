@@ -31,7 +31,7 @@ export const app = new Hono();
 app.use('/*', cors({
     origin: ['http://localhost:5173', 'https://8bp49x30ql.execute-api.af-south-1.amazonaws.com'],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-Organization-Id'],
     exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
     credentials: true,
     maxAge: 600,
@@ -67,11 +67,11 @@ class AuthError extends Error {
 // ============================================
 
 const rolePermissions = {
-    OWNER: { canManageOrg: true, canManageUsers: true, canManageLoans: true, canManageTransactions: true, canView: true, canViewStokvels: true, canManageStokvels: true, canAddStokvelMembers: true, canRecordStokvelPayments: true },
-    ADMIN: { canManageOrg: false, canManageUsers: true, canManageLoans: true, canManageTransactions: true, canView: true, canViewStokvels: true, canManageStokvels: true, canAddStokvelMembers: true, canRecordStokvelPayments: true },
-    MANAGER: { canManageOrg: false, canManageUsers: false, canManageLoans: true, canManageTransactions: true, canView: true, canViewStokvels: true, canManageStokvels: true, canAddStokvelMembers: true, canRecordStokvelPayments: true },
-    ACCOUNTANT: { canManageOrg: false, canManageUsers: false, canManageLoans: false, canManageTransactions: true, canView: true, canViewStokvels: true, canManageStokvels: false, canAddStokvelMembers: false, canRecordStokvelPayments: true },
-    VIEWER: { canManageOrg: false, canManageUsers: false, canManageLoans: false, canManageTransactions: false, canView: true, canViewStokvels: true, canManageStokvels: false, canAddStokvelMembers: false, canRecordStokvelPayments: false },
+    OWNER: { canView: true, canViewDashboard: true, canViewTransactions: true, canManageTransactions: true, canViewLoans: true, canManageLoans: true, canViewBankAccounts: true, canManageBankAccounts: true, canTransferFunds: true, canViewStokvels: true, canManageStokvels: true, canAddStokvelMembers: true, canRecordStokvelPayments: true, canManageUsers: true, canManageSettings: true, canManageOrg: true },
+    ADMIN: { canView: true, canViewDashboard: true, canViewTransactions: true, canManageTransactions: true, canViewLoans: true, canManageLoans: true, canViewBankAccounts: true, canManageBankAccounts: true, canTransferFunds: true, canViewStokvels: true, canManageStokvels: true, canAddStokvelMembers: true, canRecordStokvelPayments: true, canManageUsers: true, canManageSettings: true, canManageOrg: true },
+    MANAGER: { canView: true, canViewDashboard: true, canViewTransactions: true, canManageTransactions: false, canViewLoans: true, canManageLoans: false, canViewBankAccounts: true, canManageBankAccounts: false, canTransferFunds: true, canViewStokvels: true, canManageStokvels: false, canAddStokvelMembers: false, canRecordStokvelPayments: false, canManageUsers: true, canManageSettings: true, canManageOrg: false },
+    ACCOUNTANT: { canView: true, canViewDashboard: true, canViewTransactions: true, canManageTransactions: true, canViewLoans: true, canManageLoans: false, canViewBankAccounts: true, canManageBankAccounts: false, canTransferFunds: false, canViewStokvels: true, canManageStokvels: false, canAddStokvelMembers: false, canRecordStokvelPayments: true, canManageUsers: false, canManageSettings: false, canManageOrg: false },
+    VIEWER: { canView: true, canViewDashboard: true, canViewTransactions: false, canManageTransactions: false, canViewLoans: false, canManageLoans: false, canViewBankAccounts: false, canManageBankAccounts: false, canTransferFunds: false, canViewStokvels: false, canManageStokvels: false, canAddStokvelMembers: false, canRecordStokvelPayments: false, canManageUsers: false, canManageSettings: false, canManageOrg: false },
 };
 
 async function checkPermission(
@@ -98,7 +98,20 @@ async function checkPermission(
     return permissions[requiredPermission] || false;
 }
 
-async function getUserOrganization(userId: string): Promise<string | null> {
+async function getUserOrganization(userId: string, preferredOrganizationId?: string | null): Promise<string | null> {
+    if (preferredOrganizationId) {
+        const preferredMembership = await db.query.organizationMembers.findFirst({
+            where: and(
+                eq(organizationMembers.userId, userId),
+                eq(organizationMembers.organizationId, preferredOrganizationId)
+            ),
+        });
+
+        if (preferredMembership) {
+            return preferredMembership.organizationId;
+        }
+    }
+
     const membership = await db.query.organizationMembers.findFirst({
         where: eq(organizationMembers.userId, userId),
     });
@@ -269,8 +282,8 @@ const authenticate = async (c: CustomContext, next: () => Promise<void>) => {
         c.set('userId', payload.userId);
         c.set('userEmail', payload.email);
 
-        // Get user's organization
-        const orgId = await getUserOrganization(payload.userId);
+        const requestedOrganizationId = c.req.header('X-Organization-Id');
+        const orgId = await getUserOrganization(payload.userId, requestedOrganizationId);
         if (orgId) {
             c.set('organizationId', orgId);
         }
@@ -677,7 +690,7 @@ app.get('/organizations/:organizationId', authenticate, async (c) => {
 
     try {
         // Check if user is member
-        const hasAccess = await checkPermission(userId, organizationId, 'canView');
+        const hasAccess = await checkPermission(userId, organizationId, 'canViewLoans');
         if (!hasAccess) {
             return c.json({ error: 'Access denied' }, 403);
         }
@@ -931,6 +944,10 @@ app.post('/invitations/:token/accept', authenticate, async (c) => {
         return c.json({
             success: true,
             message: 'Invitation accepted successfully',
+            organization: {
+                id: invitation.organizationId,
+                role: invitation.role,
+            },
         });
     } catch (err) {
         return c.json({
@@ -1065,7 +1082,7 @@ app.post('/balances', authenticate, async (c) => {
             return c.json({ error: 'Organization not found' }, 404);
         }
 
-        const hasAccess = await checkPermission(userId, organizationId, 'canManageTransactions');
+        const hasAccess = await checkPermission(userId, organizationId, 'canManageBankAccounts');
         if (!hasAccess) {
             return c.json({ error: 'Access denied' }, 403);
         }
@@ -1123,7 +1140,7 @@ app.get('/balances', authenticate, async (c) => {
             return c.json({ error: 'Organization not found' }, 404);
         }
 
-        const hasAccess = await checkPermission(userId, organizationId, 'canView');
+        const hasAccess = await checkPermission(userId, organizationId, 'canViewBankAccounts');
         if (!hasAccess) {
             return c.json({ error: 'Access denied' }, 403);
         }
@@ -1162,7 +1179,7 @@ app.delete('/balances/:balanceId', authenticate, async (c) => {
             return c.json({ error: 'Organization not found' }, 404);
         }
 
-        const hasAccess = await checkPermission(userId, organizationId, 'canManageTransactions');
+        const hasAccess = await checkPermission(userId, organizationId, 'canManageBankAccounts');
         if (!hasAccess) {
             return c.json({ error: 'Access denied' }, 403);
         }
@@ -1222,12 +1239,12 @@ app.post('/transactions', authenticate, async (c) => {
             return c.json({ error: 'Organization not found' }, 404);
         }
 
-        const hasAccess = await checkPermission(userId, organizationId, 'canManageTransactions');
+        const body = await c.req.json();
+        const requiredPermission = body.type === 'TRANSFER' ? 'canTransferFunds' : 'canManageTransactions';
+        const hasAccess = await checkPermission(userId, organizationId, requiredPermission);
         if (!hasAccess) {
             return c.json({ error: 'Access denied' }, 403);
         }
-
-        const body = await c.req.json();
 
         if (!body.amount || !body.type || !body.category) {
             return c.json({ error: 'Amount, type, and category are required' }, 400);
@@ -1321,7 +1338,7 @@ app.get('/transactions', authenticate, async (c) => {
             return c.json({ error: 'Organization not found' }, 404);
         }
 
-        const hasAccess = await checkPermission(userId, organizationId, 'canView');
+        const hasAccess = await checkPermission(userId, organizationId, 'canViewTransactions');
         if (!hasAccess) {
             return c.json({ error: 'Access denied' }, 403);
         }
@@ -1362,7 +1379,7 @@ app.get('/transactions/:transactionId', authenticate, async (c) => {
             return c.json({ error: 'Organization not found' }, 404);
         }
 
-        const hasAccess = await checkPermission(userId, organizationId, 'canView');
+        const hasAccess = await checkPermission(userId, organizationId, 'canViewTransactions');
         if (!hasAccess) {
             return c.json({ error: 'Access denied' }, 403);
         }
@@ -1558,56 +1575,21 @@ app.get('/loans', authenticate, async (c) => {
             return c.json({ error: 'Organization not found' }, 404);
         }
 
-        const hasAccess = await checkPermission(userId, organizationId, 'canView');
+        const hasAccess = await checkPermission(userId, organizationId, 'canViewLoans');
         if (!hasAccess) {
             return c.json({ error: 'Access denied' }, 403);
         }
 
-        // Check if user can view all loans or only specific ones
-        const canViewAll = await checkPermission(userId, organizationId, 'canManageLoans');
-
-        let orgLoans;
-        if (canViewAll) {
-            // User can view all loans
-            orgLoans = await db.query.loans.findMany({
-                where: eq(loans.organizationId, organizationId),
-                with: {
-                    balance: true,
-                    transactions: {
-                        orderBy: [desc(transactions.date)],
-                    },
+        const orgLoans = await db.query.loans.findMany({
+            where: eq(loans.organizationId, organizationId),
+            with: {
+                balance: true,
+                transactions: {
+                    orderBy: [desc(transactions.date)],
                 },
-                orderBy: [desc(loans.createdAt)],
-            });
-        } else {
-            // User can only view loans they have access to
-            const accessGrants = await db.query.loanAccess.findMany({
-                where: and(
-                    eq(loanAccess.userId, userId),
-                    eq(loanAccess.canView, true)
-                ),
-            });
-
-            const accessibleLoanIds = accessGrants.map(a => a.loanId);
-
-            if (accessibleLoanIds.length === 0) {
-                return c.json({ success: true, loans: [] });
-            }
-
-            orgLoans = await db.query.loans.findMany({
-                where: and(
-                    eq(loans.organizationId, organizationId),
-                    inArray(loans.id, accessibleLoanIds)
-                ),
-                with: {
-                    balance: true,
-                    transactions: {
-                        orderBy: [desc(transactions.date)],
-                    },
-                },
-                orderBy: [desc(loans.createdAt)],
-            });
-        }
+            },
+            orderBy: [desc(loans.createdAt)],
+        });
 
         return c.json({
             success: true,
@@ -1635,6 +1617,11 @@ app.get('/loans/:loanId', authenticate, async (c) => {
             return c.json({ error: 'Organization not found' }, 404);
         }
 
+        const hasAccess = await checkPermission(userId, organizationId, 'canViewLoans');
+        if (!hasAccess) {
+            return c.json({ error: 'Access denied' }, 403);
+        }
+
         const loan = await db.query.loans.findFirst({
             where: and(
                 eq(loans.id, loanId),
@@ -1650,23 +1637,6 @@ app.get('/loans/:loanId', authenticate, async (c) => {
 
         if (!loan) {
             return c.json({ error: 'Loan not found' }, 404);
-        }
-
-        // Check access
-        const canViewAll = await checkPermission(userId, organizationId, 'canManageLoans');
-
-        if (!canViewAll) {
-            const access = await db.query.loanAccess.findFirst({
-                where: and(
-                    eq(loanAccess.loanId, loanId),
-                    eq(loanAccess.userId, userId),
-                    eq(loanAccess.canView, true)
-                ),
-            });
-
-            if (!access) {
-                return c.json({ error: 'Access denied' }, 403);
-            }
         }
 
         return c.json({

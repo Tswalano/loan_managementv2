@@ -32,19 +32,26 @@ import ViewTransactionDialog from '@/components/transactions/transaction-dialog'
 import { LoanDetailsDialog } from '@/components/loans/loan-details-dialog';
 import TransactionForm from '@/components/transactions/transaction-form';
 import { useToast } from "@/hooks/use-toast";
-import { api, useFinanceData } from '@/lib/api';
+import { api, useCurrentUser, useFinanceData } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { getActiveOrganization, resolveOrganizationPermissions } from '@/lib/permissions';
 
 type TransactionFilter = 'ALL' | 'LOAN' | 'INCOME' | 'TRANSFER' | 'EXPENSE';
 type TransactionFlow = 'income' | 'expense' | 'transfer';
 
 export default function TransactionsPage() {
     const { toast } = useToast();
+    const { data: currentUserData } = useCurrentUser();
     const {
         isLoading,
         transactions,
         balances,
     } = useFinanceData();
+    const activeOrganization = getActiveOrganization(currentUserData?.organizations);
+    const permissions = activeOrganization
+        ? resolveOrganizationPermissions(activeOrganization.role, activeOrganization.permissions)
+        : null;
+    const canManageTransactions = Boolean(permissions?.canManageTransactions);
 
     const [isNewTransactionOpen, setIsNewTransactionOpen] = useState(false);
     const [selectedType, setSelectedType] = useState<TransactionFilter>('ALL');
@@ -222,13 +229,15 @@ export default function TransactionsPage() {
                         Track your income, expenses, and loan transactions
                     </p>
                 </div>
-                <Button
-                    onClick={() => setIsNewTransactionOpen(true)}
-                    className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                >
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Transaction
-                </Button>
+                {canManageTransactions && (
+                    <Button
+                        onClick={() => setIsNewTransactionOpen(true)}
+                        className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Transaction
+                    </Button>
+                )}
             </div>
 
             <Card className={cn(
@@ -246,12 +255,14 @@ export default function TransactionsPage() {
                     <p className="text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
                         Start tracking your transactions, monitor payments, and manage your lending business efficiently.
                     </p>
-                    <Button
-                        onClick={() => setIsNewTransactionOpen(true)}
-                        className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                    >
-                        Create Your First Transaction
-                    </Button>
+                    {canManageTransactions && (
+                        <Button
+                            onClick={() => setIsNewTransactionOpen(true)}
+                            className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                        >
+                            Create Your First Transaction
+                        </Button>
+                    )}
                 </CardContent>
             </Card>
         </div>
@@ -269,12 +280,14 @@ export default function TransactionsPage() {
         return (
             <>
                 <EmptyState />
-                <TransactionForm
-                    balances={balances}
-                    open={isNewTransactionOpen}
-                    onClose={() => setIsNewTransactionOpen(false)}
-                    onSubmit={handleTransactionCreate}
-                />
+                {canManageTransactions && (
+                    <TransactionForm
+                        balances={balances}
+                        open={isNewTransactionOpen}
+                        onClose={() => setIsNewTransactionOpen(false)}
+                        onSubmit={handleTransactionCreate}
+                    />
+                )}
             </>
         );
     }
@@ -315,14 +328,16 @@ export default function TransactionsPage() {
                         <Download className="h-4 w-4 mr-2" />
                         Export
                     </Button>
-                    <Button
-                        size="sm"
-                        onClick={() => setIsNewTransactionOpen(true)}
-                        className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Transaction
-                    </Button>
+                    {canManageTransactions && (
+                        <Button
+                            size="sm"
+                            onClick={() => setIsNewTransactionOpen(true)}
+                            className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                        >
+                            <Plus className="h-4 w-4 mr-2" />
+                            New Transaction
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -617,12 +632,14 @@ export default function TransactionsPage() {
             </Card>
 
             {/* Dialogs */}
-            <TransactionForm
-                balances={balances}
-                open={isNewTransactionOpen}
-                onClose={() => setIsNewTransactionOpen(false)}
-                onSubmit={handleTransactionCreate}
-            />
+            {canManageTransactions && (
+                <TransactionForm
+                    balances={balances}
+                    open={isNewTransactionOpen}
+                    onClose={() => setIsNewTransactionOpen(false)}
+                    onSubmit={handleTransactionCreate}
+                />
+            )}
 
             <ViewTransactionDialog
                 transaction={viewTransaction}

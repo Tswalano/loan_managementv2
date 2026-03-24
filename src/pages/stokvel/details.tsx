@@ -17,10 +17,11 @@ import {
 } from "@/components/ui/table";
 import { cn } from '@/lib/utils';
 import { formatCurrency, formatShortDate } from '@/lib/utils/formatters';
-import { api, useStokvels } from '@/lib/api';
+import { api, useCurrentUser, useStokvels } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { AddMemberDialog, RecordPaymentDialog } from './dialogs';
 import type { AddStokvelMemberRequest, RecordStokvelPaymentRequest, Stokvel, StokvelFrequency, StokvelMember, StokvelPayment } from '@/types';
+import { getActiveOrganization, resolveOrganizationPermissions } from '@/lib/permissions';
 
 type MemberInsight = {
     member: StokvelMember;
@@ -171,12 +172,19 @@ function buildMemberInsight(stokvel: Stokvel, member: StokvelMember): MemberInsi
 
 export default function StokvelDetailsPage() {
     const { stokvelId } = useParams();
+    const { data: currentUserData } = useCurrentUser();
     const { data, isLoading } = useStokvels();
     const [addMemberOpen, setAddMemberOpen] = useState(false);
     const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
     const [transactionsOpen, setTransactionsOpen] = useState(false);
 
     const stokvel = useMemo(() => (data?.stokvels || []).find((item: Stokvel) => item.id === stokvelId) || null, [data, stokvelId]);
+    const activeOrganization = getActiveOrganization(currentUserData?.organizations);
+    const permissions = activeOrganization
+        ? resolveOrganizationPermissions(activeOrganization.role, activeOrganization.permissions)
+        : null;
+    const canAddStokvelMembers = Boolean(permissions?.canAddStokvelMembers);
+    const canRecordStokvelPayments = Boolean(permissions?.canRecordStokvelPayments);
 
     const memberInsights = useMemo(
         () => stokvel ? stokvel.members.map((member: StokvelMember) => buildMemberInsight(stokvel, member)).sort((a: MemberInsight, b: MemberInsight) => b.skippedCycles - a.skippedCycles) : [],
@@ -338,21 +346,25 @@ export default function StokvelDetailsPage() {
                         <Download className="h-4 w-4 mr-2" />
                         Export
                     </Button>
-                    <Button
-                        variant="outline"
-                        onClick={() => setAddMemberOpen(true)}
-                        className="backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border border-gray-200/50 dark:border-gray-700/50"
-                    >
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Add Member
-                    </Button>
-                    <Button
-                        onClick={() => setRecordPaymentOpen(true)}
-                        className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                    >
-                        <DollarSign className="h-4 w-4 mr-2" />
-                        Record Payment
-                    </Button>
+                    {canAddStokvelMembers && (
+                        <Button
+                            variant="outline"
+                            onClick={() => setAddMemberOpen(true)}
+                            className="backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border border-gray-200/50 dark:border-gray-700/50"
+                        >
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Add Member
+                        </Button>
+                    )}
+                    {canRecordStokvelPayments && (
+                        <Button
+                            onClick={() => setRecordPaymentOpen(true)}
+                            className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                        >
+                            <DollarSign className="h-4 w-4 mr-2" />
+                            Record Payment
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -506,19 +518,23 @@ export default function StokvelDetailsPage() {
                 </CardContent>
             </Card>
 
-            <AddMemberDialog
-                open={addMemberOpen}
-                onOpenChange={setAddMemberOpen}
-                stokvel={stokvel}
-                onSave={handleAddMember}
-            />
+            {canAddStokvelMembers && (
+                <AddMemberDialog
+                    open={addMemberOpen}
+                    onOpenChange={setAddMemberOpen}
+                    stokvel={stokvel}
+                    onSave={handleAddMember}
+                />
+            )}
 
-            <RecordPaymentDialog
-                open={recordPaymentOpen}
-                onOpenChange={setRecordPaymentOpen}
-                stokvel={stokvel}
-                onSave={handleRecordPayment}
-            />
+            {canRecordStokvelPayments && (
+                <RecordPaymentDialog
+                    open={recordPaymentOpen}
+                    onOpenChange={setRecordPaymentOpen}
+                    stokvel={stokvel}
+                    onSave={handleRecordPayment}
+                />
+            )}
 
             <Dialog open={transactionsOpen} onOpenChange={setTransactionsOpen}>
                 <DialogContent className={cn(

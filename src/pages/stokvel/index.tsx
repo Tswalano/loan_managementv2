@@ -22,7 +22,7 @@ import { MetricCard } from '@/components/dashboard/MetricCard';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils/formatters';
 import { toast } from '@/hooks/use-toast';
-import { api, useStokvels } from '@/lib/api';
+import { api, useCurrentUser, useStokvels } from '@/lib/api';
 import type {
     AddStokvelMemberRequest,
     CreateStokvelRequest,
@@ -32,11 +32,20 @@ import type {
     StokvelStatus,
 } from '@/types';
 import { AddMemberDialog, RecordPaymentDialog } from './dialogs';
+import { getActiveOrganization, resolveOrganizationPermissions } from '@/lib/permissions';
 
 const StokvelsPage: React.FC = () => {
     const navigate = useNavigate();
+    const { data: currentUserData } = useCurrentUser();
     const { data, isLoading } = useStokvels();
     const stokvels: Stokvel[] = data?.stokvels || [];
+    const activeOrganization = getActiveOrganization(currentUserData?.organizations);
+    const permissions = activeOrganization
+        ? resolveOrganizationPermissions(activeOrganization.role, activeOrganization.permissions)
+        : null;
+    const canManageStokvels = Boolean(permissions?.canManageStokvels);
+    const canAddStokvelMembers = Boolean(permissions?.canAddStokvelMembers);
+    const canRecordStokvelPayments = Boolean(permissions?.canRecordStokvelPayments);
     const [selectedStokvelId, setSelectedStokvelId] = useState<string | null>(null);
 
     const [createStokvelOpen, setCreateStokvelOpen] = useState(false);
@@ -77,13 +86,15 @@ const StokvelsPage: React.FC = () => {
                         Manage your savings groups and track member contributions
                     </p>
                 </div>
-                <Button
-                    onClick={() => setCreateStokvelOpen(true)}
-                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
-                >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Stokvel
-                </Button>
+                {canManageStokvels && (
+                    <Button
+                        onClick={() => setCreateStokvelOpen(true)}
+                        className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
+                    >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create Stokvel
+                    </Button>
+                )}
             </div>
 
             <div className="grid gap-6 md:grid-cols-4 mb-8">
@@ -121,6 +132,8 @@ const StokvelsPage: React.FC = () => {
                                 key={stokvel.id}
                                 stokvel={stokvel}
                                 onViewDetails={() => navigate(`/app/stokvel/${stokvel.id}`)}
+                                canAddMember={canAddStokvelMembers}
+                                canRecordPayment={canRecordStokvelPayments}
                                 onAddMember={() => {
                                     setSelectedStokvelId(stokvel.id);
                                     setAddMemberOpen(true);
@@ -149,38 +162,46 @@ const StokvelsPage: React.FC = () => {
                                 <p className="text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
                                     Start your first savings group and manage member contributions from one place.
                                 </p>
-                                <Button
-                                    onClick={() => setCreateStokvelOpen(true)}
-                                    className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                                >
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    Create Your First Stokvel
-                                </Button>
+                                {canManageStokvels && (
+                                    <Button
+                                        onClick={() => setCreateStokvelOpen(true)}
+                                        className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                                    >
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        Create Your First Stokvel
+                                    </Button>
+                                )}
                             </CardContent>
                         </Card>
                     )}
                 </>
             )}
 
-            <CreateStokvelDialog
-                open={createStokvelOpen}
-                onOpenChange={setCreateStokvelOpen}
-                onSave={handleCreateStokvel}
-            />
+            {canManageStokvels && (
+                <CreateStokvelDialog
+                    open={createStokvelOpen}
+                    onOpenChange={setCreateStokvelOpen}
+                    onSave={handleCreateStokvel}
+                />
+            )}
 
-            <AddMemberDialog
-                open={addMemberOpen}
-                onOpenChange={setAddMemberOpen}
-                stokvel={selectedStokvel}
-                onSave={handleAddMember}
-            />
+            {canAddStokvelMembers && (
+                <AddMemberDialog
+                    open={addMemberOpen}
+                    onOpenChange={setAddMemberOpen}
+                    stokvel={selectedStokvel}
+                    onSave={handleAddMember}
+                />
+            )}
 
-            <RecordPaymentDialog
-                open={recordPaymentOpen}
-                onOpenChange={setRecordPaymentOpen}
-                stokvel={selectedStokvel}
-                onSave={handleRecordPayment}
-            />
+            {canRecordStokvelPayments && (
+                <RecordPaymentDialog
+                    open={recordPaymentOpen}
+                    onOpenChange={setRecordPaymentOpen}
+                    stokvel={selectedStokvel}
+                    onSave={handleRecordPayment}
+                />
+            )}
         </div>
     );
 };
@@ -222,6 +243,8 @@ interface StokvelCardProps {
     onViewDetails: () => void;
     onAddMember: () => void;
     onRecordPayment: () => void;
+    canAddMember: boolean;
+    canRecordPayment: boolean;
 }
 
 const StokvelCard: React.FC<StokvelCardProps> = ({
@@ -229,6 +252,8 @@ const StokvelCard: React.FC<StokvelCardProps> = ({
     onViewDetails,
     onAddMember,
     onRecordPayment,
+    canAddMember,
+    canRecordPayment,
 }) => {
     const totalCollected = parseFloat(stokvel.totalCollected || '0');
     const targetAmount = parseFloat(stokvel.targetAmount || '0');
@@ -336,24 +361,28 @@ const StokvelCard: React.FC<StokvelCardProps> = ({
                             <Eye className="w-3.5 h-3.5 mr-1.5" />
                             View
                         </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={onAddMember}
-                            className="h-8 px-3 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-gray-800/60"
-                        >
-                            <UserPlus className="w-3.5 h-3.5 mr-1.5" />
-                            Member
-                        </Button>
+                        {canAddMember && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={onAddMember}
+                                className="h-8 px-3 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-gray-800/60"
+                            >
+                                <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+                                Member
+                            </Button>
+                        )}
                     </div>
-                    <Button
-                        size="sm"
-                        onClick={onRecordPayment}
-                        className="h-8 px-3 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg"
-                    >
-                        <DollarSign className="w-3.5 h-3.5 mr-1.5" />
-                        Pay
-                    </Button>
+                    {canRecordPayment && (
+                        <Button
+                            size="sm"
+                            onClick={onRecordPayment}
+                            className="h-8 px-3 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg"
+                        >
+                            <DollarSign className="w-3.5 h-3.5 mr-1.5" />
+                            Pay
+                        </Button>
+                    )}
                 </div>
             </div>
         </Card>

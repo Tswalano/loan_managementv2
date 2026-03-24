@@ -20,6 +20,8 @@ interface LoanTableProps {
     refreshLoans: () => void;
     handleLoanPayment: (payment: LoanPaymentRequest) => Promise<LoanResponse>;
     loading: boolean;
+    canManageLoans: boolean;
+    canProcessLoanPayments: boolean;
 }
 
 function LoanTableRecords({
@@ -28,6 +30,8 @@ function LoanTableRecords({
     loading,
     loans,
     balances,
+    canManageLoans,
+    canProcessLoanPayments,
 }: LoanTableProps) {
     const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
     const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -205,7 +209,7 @@ function LoanTableRecords({
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                {loan.status === 'ACTIVE' ? (
+                                                {loan.status === 'ACTIVE' && canProcessLoanPayments ? (
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
@@ -222,7 +226,7 @@ function LoanTableRecords({
                                                     >
                                                         Make Payment
                                                     </Button>
-                                                ) : loan.status === 'PENDING' ? (
+                                                ) : loan.status === 'PENDING' && canManageLoans ? (
                                                     <Button
                                                         variant="outline"
                                                         size="sm"

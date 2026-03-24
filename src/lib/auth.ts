@@ -39,6 +39,10 @@ export function getCurrentOrganization(): any | null {
     }
 }
 
+export function setCurrentOrganization(organization: any): void {
+    sessionStorage.setItem('organization', JSON.stringify(organization));
+}
+
 /**
  * Check if user is authenticated
  */

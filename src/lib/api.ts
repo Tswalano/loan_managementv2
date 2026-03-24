@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useQueryClient, QueryClient } from '@tanstack/react-query';
 import { BACKEND_API_URL } from '@/lib/utils/consts';
+import { getCurrentOrganization } from '@/lib/auth';
+import { getActiveOrganization, resolveOrganizationPermissions } from '@/lib/permissions';
 
 // ============================================
 // TYPES
@@ -190,9 +192,11 @@ export interface ApiResponse<T = any> {
 const getAuthHeaders = () => {
     const token = sessionStorage.getItem('authToken');
     if (!token) throw new Error('No authentication token found');
+    const organization = getCurrentOrganization();
     return {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
+        ...(organization?.id ? { 'X-Organization-Id': organization.id } : {}),
     };
 };
 
@@ -286,6 +290,9 @@ class FinanceAPI {
             body: JSON.stringify(data),
         });
         const result = await handleResponse<ApiResponse<{ user: User }>>(res);
+        if (result.user) {
+            sessionStorage.setItem('user', JSON.stringify(result.user));
+        }
         this.invalidateQueries([['currentUser']]);
         return result;
     }
@@ -694,13 +701,13 @@ export function useCurrentUser() {
     });
 }
 
-export function useBalances() {
+export function useBalances(enabled = true) {
     const { data: userData } = useCurrentUser();
 
     return useQuery({
         queryKey: ['balances'],
         queryFn: () => api.getBalances(),
-        enabled: !!userData?.user,
+        enabled: !!userData?.user && enabled,
     });
 }
 
@@ -710,13 +717,13 @@ export function useTransactions(filters?: {
     type?: TransactionType;
     startDate?: string;
     endDate?: string;
-}) {
+}, enabled = true) {
     const { data: userData } = useCurrentUser();
 
     return useQuery({
         queryKey: ['transactions', filters],
         queryFn: () => api.getTransactions(filters),
-        enabled: !!userData?.user,
+        enabled: !!userData?.user && enabled,
     });
 }
 
@@ -728,13 +735,13 @@ export function useTransaction(transactionId?: string) {
     });
 }
 
-export function useLoans(filters?: { status?: LoanStatus }) {
+export function useLoans(filters?: { status?: LoanStatus }, enabled = true) {
     const { data: userData } = useCurrentUser();
 
     return useQuery({
         queryKey: ['loans', filters],
         queryFn: () => api.getLoans(filters),
-        enabled: !!userData?.user,
+        enabled: !!userData?.user && enabled,
     });
 }
 
@@ -746,21 +753,21 @@ export function useLoan(loanId?: string) {
     });
 }
 
-export function useOrganization(organizationId?: string) {
+export function useOrganization(organizationId?: string, enabled = true) {
     return useQuery({
         queryKey: ['organization', organizationId],
         queryFn: () => api.getOrganization(organizationId!),
-        enabled: !!organizationId,
+        enabled: !!organizationId && enabled,
     });
 }
 
-export function useDashboard() {
+export function useDashboard(enabled = true) {
     const { data: userData } = useCurrentUser();
 
     return useQuery({
         queryKey: ['dashboard'],
         queryFn: () => api.getDashboard(),
-        enabled: !!userData?.user,
+        enabled: !!userData?.user && enabled,
         staleTime: 2 * 60 * 1000, // 2 minutes
     });
 }
@@ -775,13 +782,13 @@ export function useAuditLogs(limit?: number) {
     });
 }
 
-export function useStokvels() {
+export function useStokvels(enabled = true) {
     const { data: userData } = useCurrentUser();
 
     return useQuery({
         queryKey: ['stokvels'],
         queryFn: () => api.getStokvels(),
-        enabled: !!userData?.user,
+        enabled: !!userData?.user && enabled,
     });
 }
 
@@ -969,10 +976,15 @@ function computeMonthlyMetrics(
 
 export function useFinanceData() {
     const { data: userData, isLoading: userLoading } = useCurrentUser();
-    const { data: balancesData, isLoading: balancesLoading } = useBalances();
-    const { data: transactionsData, isLoading: transactionsLoading } = useTransactions();
-    const { data: loansData, isLoading: loansLoading } = useLoans();
-    const { data: dashboardData, isLoading: dashboardLoading } = useDashboard();
+    const activeOrganization = getActiveOrganization(userData?.organizations);
+    const permissions = activeOrganization
+        ? resolveOrganizationPermissions(activeOrganization.role, activeOrganization.permissions)
+        : null;
+
+    const { data: balancesData, isLoading: balancesLoading } = useBalances(Boolean(permissions?.canViewBankAccounts));
+    const { data: transactionsData, isLoading: transactionsLoading } = useTransactions(undefined, Boolean(permissions?.canViewTransactions));
+    const { data: loansData, isLoading: loansLoading } = useLoans(undefined, Boolean(permissions?.canViewLoans));
+    const { data: dashboardData, isLoading: dashboardLoading } = useDashboard(Boolean(permissions?.canViewDashboard));
 
     const transactions = transactionsData?.transactions || [];
     const loans = loansData?.loans || [];

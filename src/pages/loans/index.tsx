@@ -11,14 +11,16 @@ import { Plus, Download, Calendar, TrendingUp, DollarSign, AlertCircle } from 'l
 import * as XLSX from 'xlsx';
 import { NewLoanDialog } from '@/components/loans/new-loan-dialog';
 import LoanTableRecords from '@/components/loans/loan-table';
-import { api } from '@/lib/api';
+import { api, useCurrentUser } from '@/lib/api';
 import { useFinanceData } from '@/lib/api';
 import { CreateLoanRequest, Loan, LoanPaymentRequest } from '@/types';
 import { calculateLoanMetrics } from '@/components/dashboard/utils';
 import ErrorComponent from '@/components/error/error-component';
 import { cn } from '@/lib/utils';
+import { getActiveOrganization, resolveOrganizationPermissions } from '@/lib/permissions';
 
 export default function LoanSummaryPage() {
+    const { data: currentUserData } = useCurrentUser();
     const [isAlertOpen, setIsAlertOpen] = useState(false);
     const [isNewLoanOpen, setIsNewLoanOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -28,6 +30,12 @@ export default function LoanSummaryPage() {
         loans,
         balances,
     } = useFinanceData();
+    const activeOrganization = getActiveOrganization(currentUserData?.organizations);
+    const permissions = activeOrganization
+        ? resolveOrganizationPermissions(activeOrganization.role, activeOrganization.permissions)
+        : null;
+    const canManageLoans = Boolean(permissions?.canManageLoans);
+    const canProcessLoanPayments = Boolean(permissions?.canManageTransactions);
 
     const metrics = useMemo(() => calculateLoanMetrics(loans), [loans]);
 
@@ -121,13 +129,15 @@ export default function LoanSummaryPage() {
                             Get started by creating your first loan
                         </p>
                     </div>
-                    <Button
-                        onClick={() => setIsNewLoanOpen(true)}
-                        className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Loan
-                    </Button>
+                    {canManageLoans && (
+                        <Button
+                            onClick={() => setIsNewLoanOpen(true)}
+                            className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                        >
+                            <Plus className="h-4 w-4 mr-2" />
+                            New Loan
+                        </Button>
+                    )}
                 </div>
 
                 <Card className={cn(
@@ -145,21 +155,25 @@ export default function LoanSummaryPage() {
                         <p className="text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
                             Start tracking your loans and manage borrowers efficiently with our powerful loan management system.
                         </p>
-                        <Button
-                            onClick={() => setIsNewLoanOpen(true)}
-                            className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                        >
-                            Create Your First Loan
-                        </Button>
+                        {canManageLoans && (
+                            <Button
+                                onClick={() => setIsNewLoanOpen(true)}
+                                className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                            >
+                                Create Your First Loan
+                            </Button>
+                        )}
                     </CardContent>
                 </Card>
 
-                <NewLoanDialog
-                    open={isNewLoanOpen}
-                    onClose={() => setIsNewLoanOpen(false)}
-                    onSubmit={handleCreateLoan}
-                    balances={balances}
-                />
+                {canManageLoans && (
+                    <NewLoanDialog
+                        open={isNewLoanOpen}
+                        onClose={() => setIsNewLoanOpen(false)}
+                        onSubmit={handleCreateLoan}
+                        balances={balances}
+                    />
+                )}
             </div>
         );
     }
@@ -194,14 +208,16 @@ export default function LoanSummaryPage() {
                         <Download className="h-4 w-4 mr-2" />
                         Export
                     </Button>
-                    <Button
-                        size="sm"
-                        onClick={() => setIsNewLoanOpen(true)}
-                        className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Loan
-                    </Button>
+                    {canManageLoans && (
+                        <Button
+                            size="sm"
+                            onClick={() => setIsNewLoanOpen(true)}
+                            className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                        >
+                            <Plus className="h-4 w-4 mr-2" />
+                            New Loan
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -301,15 +317,19 @@ export default function LoanSummaryPage() {
                     // Data will refresh automatically via React Query
                 }}
                 handleLoanPayment={handleLoanPayment}
+                canManageLoans={canManageLoans}
+                canProcessLoanPayments={canProcessLoanPayments}
             />
 
             {/* New Loan Dialog */}
-            <NewLoanDialog
-                open={isNewLoanOpen}
-                balances={balances}
-                onClose={() => setIsNewLoanOpen(false)}
-                onSubmit={handleCreateLoan}
-            />
+            {canManageLoans && (
+                <NewLoanDialog
+                    open={isNewLoanOpen}
+                    balances={balances}
+                    onClose={() => setIsNewLoanOpen(false)}
+                    onSubmit={handleCreateLoan}
+                />
+            )}
 
             {error && (
                 <ErrorComponent

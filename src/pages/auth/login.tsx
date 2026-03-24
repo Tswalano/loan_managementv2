@@ -16,6 +16,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Loader2, PiggyBank, Play, User as UserIcon, Mail, Lock, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
+import { saveUserData } from '@/lib/auth';
 import { BACKEND_API_URL } from '@/lib/utils/consts';
 import { cn } from '@/lib/utils';
 import { MinimumFooter } from '@/components/footer';
@@ -43,11 +44,7 @@ export default function LoginPage() {
 
         try {
             const result = await api.login({ email, password });
-
-            sessionStorage.setItem('user', JSON.stringify(result.user));
-            if (result.organization) {
-                sessionStorage.setItem('organization', JSON.stringify(result.organization));
-            }
+            saveUserData(result.token, result.user, result.organization);
 
             toast({
                 title: "Success",
@@ -82,11 +79,7 @@ export default function LoginPage() {
                     email: DEMO_EMAIL,
                     password: DEMO_PASSWORD
                 });
-
-                sessionStorage.setItem('user', JSON.stringify(result.user));
-                if (result.organization) {
-                    sessionStorage.setItem('organization', JSON.stringify(result.organization));
-                }
+                saveUserData(result.token, result.user, result.organization);
 
                 toast({
                     title: "Success",

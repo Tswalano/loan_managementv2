@@ -112,10 +112,22 @@ export interface OrganizationMember {
 }
 
 export interface OrganizationPermissionSet {
+    canView: boolean;
+    canViewDashboard: boolean;
+    canViewTransactions: boolean;
+    canManageTransactions: boolean;
+    canViewLoans: boolean;
+    canManageLoans: boolean;
+    canViewBankAccounts: boolean;
+    canManageBankAccounts: boolean;
+    canTransferFunds: boolean;
     canViewStokvels?: boolean;
-    canManageStokvels?: boolean;
-    canAddStokvelMembers?: boolean;
-    canRecordStokvelPayments?: boolean;
+    canManageStokvels: boolean;
+    canAddStokvelMembers: boolean;
+    canRecordStokvelPayments: boolean;
+    canManageUsers: boolean;
+    canManageSettings: boolean;
+    canManageOrg: boolean;
 }
 
 export interface Invitation {
@@ -541,71 +553,115 @@ export type TransactionFilters = PaginationParams & DateRangeParams & FilterPara
 // PERMISSION HELPERS
 // ============================================
 
-export const RolePermissions: Record<UserRole, {
-    canManageOrg: boolean;
-    canManageUsers: boolean;
-    canManageLoans: boolean;
-    canManageTransactions: boolean;
+export interface AppPermissionMap {
     canView: boolean;
+    canViewDashboard: boolean;
+    canViewTransactions: boolean;
+    canManageTransactions: boolean;
+    canViewLoans: boolean;
+    canManageLoans: boolean;
+    canViewBankAccounts: boolean;
+    canManageBankAccounts: boolean;
+    canTransferFunds: boolean;
     canViewStokvels: boolean;
     canManageStokvels: boolean;
     canAddStokvelMembers: boolean;
     canRecordStokvelPayments: boolean;
-}> = {
+    canManageUsers: boolean;
+    canManageSettings: boolean;
+    canManageOrg: boolean;
+}
+
+export const RolePermissions: Record<UserRole, AppPermissionMap> = {
     [UserRole.OWNER]: {
-        canManageOrg: true,
-        canManageUsers: true,
-        canManageLoans: true,
-        canManageTransactions: true,
         canView: true,
+        canViewDashboard: true,
+        canViewTransactions: true,
+        canManageTransactions: true,
+        canViewLoans: true,
+        canManageLoans: true,
+        canViewBankAccounts: true,
+        canManageBankAccounts: true,
+        canTransferFunds: true,
         canViewStokvels: true,
         canManageStokvels: true,
         canAddStokvelMembers: true,
-        canRecordStokvelPayments: true
+        canRecordStokvelPayments: true,
+        canManageUsers: true,
+        canManageSettings: true,
+        canManageOrg: true,
     },
     [UserRole.ADMIN]: {
-        canManageOrg: false,
-        canManageUsers: true,
-        canManageLoans: true,
-        canManageTransactions: true,
         canView: true,
+        canViewDashboard: true,
+        canViewTransactions: true,
+        canManageTransactions: true,
+        canViewLoans: true,
+        canManageLoans: true,
+        canViewBankAccounts: true,
+        canManageBankAccounts: true,
+        canTransferFunds: true,
         canViewStokvels: true,
         canManageStokvels: true,
         canAddStokvelMembers: true,
-        canRecordStokvelPayments: true
+        canRecordStokvelPayments: true,
+        canManageUsers: true,
+        canManageSettings: true,
+        canManageOrg: true,
     },
     [UserRole.MANAGER]: {
-        canManageOrg: false,
-        canManageUsers: false,
-        canManageLoans: true,
-        canManageTransactions: true,
         canView: true,
+        canViewDashboard: true,
+        canViewTransactions: true,
+        canManageTransactions: false,
+        canViewLoans: true,
+        canManageLoans: false,
+        canViewBankAccounts: true,
+        canManageBankAccounts: false,
+        canTransferFunds: true,
         canViewStokvels: true,
-        canManageStokvels: true,
-        canAddStokvelMembers: true,
-        canRecordStokvelPayments: true
+        canManageStokvels: false,
+        canAddStokvelMembers: false,
+        canRecordStokvelPayments: false,
+        canManageUsers: true,
+        canManageSettings: true,
+        canManageOrg: false,
     },
     [UserRole.ACCOUNTANT]: {
-        canManageOrg: false,
-        canManageUsers: false,
-        canManageLoans: false,
-        canManageTransactions: true,
         canView: true,
+        canViewDashboard: true,
+        canViewTransactions: true,
+        canManageTransactions: true,
+        canViewLoans: true,
+        canManageLoans: false,
+        canViewBankAccounts: true,
+        canManageBankAccounts: false,
+        canTransferFunds: false,
         canViewStokvels: true,
         canManageStokvels: false,
         canAddStokvelMembers: false,
-        canRecordStokvelPayments: true
+        canRecordStokvelPayments: true,
+        canManageUsers: false,
+        canManageSettings: false,
+        canManageOrg: false,
     },
     [UserRole.VIEWER]: {
-        canManageOrg: false,
-        canManageUsers: false,
-        canManageLoans: false,
-        canManageTransactions: false,
         canView: true,
-        canViewStokvels: true,
+        canViewDashboard: true,
+        canViewTransactions: false,
+        canManageTransactions: false,
+        canViewLoans: false,
+        canManageLoans: false,
+        canViewBankAccounts: false,
+        canManageBankAccounts: false,
+        canTransferFunds: false,
+        canViewStokvels: false,
         canManageStokvels: false,
         canAddStokvelMembers: false,
-        canRecordStokvelPayments: false
+        canRecordStokvelPayments: false,
+        canManageUsers: false,
+        canManageSettings: false,
+        canManageOrg: false,
     }
 };
 

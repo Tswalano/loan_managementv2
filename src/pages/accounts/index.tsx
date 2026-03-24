@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Plus, Wallet, CreditCard, ArrowRightCircle, ArrowDownToLine, ArrowRightLeft } from 'lucide-react';
-import { api, useBalances } from '@/lib/api';
+import { api, useBalances, useCurrentUser } from '@/lib/api';
 import { AccountType, TransactionType, type Balance } from '@/types';
 import { DeleteAccountDialog } from '@/components/cards/delete-card';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +31,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { BankCard } from '@/components/cards/bank-card';
 import { LoadFundsDialog, TransferDialog } from '@/components/cards/TransferDialogs';
+import { getActiveOrganization, resolveOrganizationPermissions } from '@/lib/permissions';
 
 const BANKS = {
     FNB: 'First National Bank',
@@ -53,6 +54,7 @@ interface AccountFormData {
 
 export default function AccountManagementPage() {
     const user = getCurrentUser();
+    const { data: currentUserData } = useCurrentUser();
     const cardholderName = user?.fullName
         || [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim()
         || user?.email
@@ -61,6 +63,13 @@ export default function AccountManagementPage() {
     const balances = useMemo(() => balancesData?.balances || [], [balancesData]);
 
     const { toast } = useToast();
+    const activeOrganization = getActiveOrganization(currentUserData?.organizations);
+    const permissions = activeOrganization
+        ? resolveOrganizationPermissions(activeOrganization.role, activeOrganization.permissions)
+        : null;
+    const canManageBankAccounts = Boolean(permissions?.canManageBankAccounts);
+    const canLoadFunds = Boolean(permissions?.canManageTransactions);
+    const canTransferFunds = Boolean(permissions?.canTransferFunds);
     const [selectedAccount, setSelectedAccount] = useState<Balance | null>(null);
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
@@ -268,7 +277,7 @@ export default function AccountManagementPage() {
     // Empty State Card Component
     const EmptyStateCard = () => (
         <Card
-            onClick={() => setIsCreateDialogOpen(true)}
+            onClick={() => canManageBankAccounts && setIsCreateDialogOpen(true)}
             className={cn(
                 "relative overflow-hidden h-60",
                 "backdrop-blur-xl bg-white/80 dark:bg-gray-900/80",
@@ -277,7 +286,7 @@ export default function AccountManagementPage() {
                 "hover:border-emerald-500 dark:hover:border-emerald-500",
                 "hover:shadow-xl dark:hover:shadow-black/40",
                 "transition-all duration-300 hover:scale-[1.02]",
-                "cursor-pointer group"
+                canManageBankAccounts ? "cursor-pointer group" : "opacity-60"
             )}
         >
             <CardContent className="flex flex-col items-center justify-center h-full p-6">
@@ -319,29 +328,35 @@ export default function AccountManagementPage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Button
-                            onClick={() => setLoadFundsOpen(true)}
-                            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
-                        >
-                            <ArrowDownToLine className="w-4 h-4 mr-2" />
-                            Load Funds
-                        </Button>
+                        {canLoadFunds && (
+                            <Button
+                                onClick={() => setLoadFundsOpen(true)}
+                                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                            >
+                                <ArrowDownToLine className="w-4 h-4 mr-2" />
+                                Load Funds
+                            </Button>
+                        )}
 
-                        <Button
-                            onClick={() => setTransferOpen(true)}
-                            className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700"
-                        >
-                            <ArrowRightLeft className="w-4 h-4 mr-2" />
-                            Transfer
-                        </Button>
+                        {canTransferFunds && (
+                            <Button
+                                onClick={() => setTransferOpen(true)}
+                                className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700"
+                            >
+                                <ArrowRightLeft className="w-4 h-4 mr-2" />
+                                Transfer
+                            </Button>
+                        )}
 
-                        <Button
-                            onClick={() => setIsCreateDialogOpen(true)}
-                            className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
-                        >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add Account
-                        </Button>
+                        {canManageBankAccounts && (
+                            <Button
+                                onClick={() => setIsCreateDialogOpen(true)}
+                                className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Account
+                            </Button>
+                        )}
                     </div>
                 </div>
 
@@ -618,7 +633,7 @@ export default function AccountManagementPage() {
                 </Dialog>
 
                 {/* Delete Account Dialog */}
-                {selectedAccount && (
+                {selectedAccount && canManageBankAccounts && (
                     <DeleteAccountDialog
                         open={!!selectedAccount}
                         onOpenChange={(open) => !open && setSelectedAccount(null)}
@@ -629,15 +644,19 @@ export default function AccountManagementPage() {
                         isDeleting={isDeleting} accountNumber={selectedAccount.accountNumber} />
                 )}
 
-                <LoadFundsDialog
-                    open={loadFundsOpen}
-                    onOpenChange={setLoadFundsOpen}
-                />
+                {canLoadFunds && (
+                    <LoadFundsDialog
+                        open={loadFundsOpen}
+                        onOpenChange={setLoadFundsOpen}
+                    />
+                )}
 
-                <TransferDialog
-                    open={transferOpen}
-                    onOpenChange={setTransferOpen}
-                />
+                {canTransferFunds && (
+                    <TransferDialog
+                        open={transferOpen}
+                        onOpenChange={setTransferOpen}
+                    />
+                )}
             </>
         </div>
     );
