@@ -63,17 +63,6 @@ export default function LandingNavbar({ variant = 'landing' }: LandingNavbarProp
 
                     {/* Right */}
                     <div className="flex items-center gap-3">
-                        <Link
-                            to="/"
-                            className={cn(
-                                'hidden sm:block px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200',
-                                location.pathname === '/'
-                                    ? 'bg-gray-800/70 text-white'
-                                    : 'text-gray-400 hover:text-white hover:bg-gray-800/60'
-                            )}
-                        >
-                            Home
-                        </Link>
                         <button
                             onClick={() => navigate('/app/login')}
                             className="px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-lg shadow-emerald-500/20 transition-all duration-200"
