@@ -52,7 +52,7 @@ const FEATURES = [
 const HERO_FEATURES = [
     { icon: TrendingUp, label: 'Real-time analytics', desc: 'Live dashboards with loan and transaction insights' },
     { icon: Shield, label: 'Secure & private', desc: 'End-to-end encrypted with role-based access control' },
-    { icon: Zap, label: 'All-in-one platform', desc: 'Loans, stokvels, and bank accounts in one place' },
+    { icon: Zap, label: 'All-in-one platform', desc: 'Loans and bank accounts in one place' },
 ];
 
 const METRICS = [
@@ -112,7 +112,7 @@ const LandingPage: React.FC = () => {
                             </span>
                         </h1>
                         <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
-                            Manage loans, stokvels, and bank accounts — all in one powerful dashboard built for teams and individuals.
+                            Manage loans and bank accounts — all in one powerful dashboard built for teams and individuals.
                         </p>
                     </div>
 
@@ -197,7 +197,7 @@ const LandingPage: React.FC = () => {
                             </span>
                         </h2>
                         <p className="text-gray-400 text-lg leading-relaxed">
-                            One platform for loans, transactions, stokvels, and analytics — built for the way your business works.
+                            One platform for loans, transactions, and analytics — built for the way your business works.
                         </p>
                     </div>
 

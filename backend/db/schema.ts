@@ -47,26 +47,6 @@ export const invitationStatusEnum = pgEnum('invitation_status', [
     'DECLINED',
     'EXPIRED'
 ]);
-export const stokvelFrequencyEnum = pgEnum('stokvel_frequency', [
-    'weekly',
-    'monthly',
-    'quarterly'
-]);
-export const stokvelStatusEnum = pgEnum('stokvel_status', [
-    'active',
-    'completed',
-    'paused'
-]);
-export const stokvelMemberStatusEnum = pgEnum('stokvel_member_status', [
-    'active',
-    'inactive'
-]);
-export const stokvelPaymentStatusEnum = pgEnum('stokvel_payment_status', [
-    'paid',
-    'pending',
-    'late'
-]);
-
 // ============================================
 // ORGANIZATIONS TABLE
 // ============================================
@@ -221,70 +201,6 @@ export const loans = pgTable('loans', {
 }));
 
 // ============================================
-// STOKVELS
-// ============================================
-
-export const stokvels = pgTable('stokvels', {
-    id: uuid('id').defaultRandom().primaryKey(),
-    organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
-    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-    name: text('name').notNull(),
-    description: text('description'),
-    contributionAmount: decimal('contribution_amount', { precision: 15, scale: 2 }).notNull(),
-    frequency: stokvelFrequencyEnum('frequency').notNull().default('monthly'),
-    startDate: timestamp('start_date').notNull(),
-    targetDate: timestamp('target_date').notNull(),
-    status: stokvelStatusEnum('status').default('active').notNull(),
-    targetAmount: decimal('target_amount', { precision: 15, scale: 2 }),
-    metadata: jsonb('metadata').default('{}'),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
-    orgIdx: index('stokvels_org_idx').on(table.organizationId),
-    userIdIdx: index('stokvels_user_id_idx').on(table.userId),
-    statusIdx: index('stokvels_status_idx').on(table.status),
-}));
-
-export const stokvelMembers = pgTable('stokvel_members', {
-    id: uuid('id').defaultRandom().primaryKey(),
-    stokvelId: uuid('stokvel_id').notNull().references(() => stokvels.id, { onDelete: 'cascade' }),
-    organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
-    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-    name: text('name').notNull(),
-    email: text('email'),
-    phone: text('phone'),
-    joinedDate: timestamp('joined_date').notNull(),
-    totalPaid: decimal('total_paid', { precision: 15, scale: 2 }).default('0.00').notNull(),
-    totalOwed: decimal('total_owed', { precision: 15, scale: 2 }).default('0.00').notNull(),
-    status: stokvelMemberStatusEnum('status').default('active').notNull(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
-    stokvelIdx: index('stokvel_members_stokvel_idx').on(table.stokvelId),
-    orgIdx: index('stokvel_members_org_idx').on(table.organizationId),
-    statusIdx: index('stokvel_members_status_idx').on(table.status),
-}));
-
-export const stokvelPayments = pgTable('stokvel_payments', {
-    id: uuid('id').defaultRandom().primaryKey(),
-    stokvelId: uuid('stokvel_id').notNull().references(() => stokvels.id, { onDelete: 'cascade' }),
-    memberId: uuid('member_id').notNull().references(() => stokvelMembers.id, { onDelete: 'cascade' }),
-    organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
-    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-    amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
-    date: timestamp('date').notNull(),
-    period: text('period').notNull(),
-    status: stokvelPaymentStatusEnum('status').default('paid').notNull(),
-    notes: text('notes'),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-}, (table) => ({
-    stokvelIdx: index('stokvel_payments_stokvel_idx').on(table.stokvelId),
-    memberIdx: index('stokvel_payments_member_idx').on(table.memberId),
-    orgIdx: index('stokvel_payments_org_idx').on(table.organizationId),
-    dateIdx: index('stokvel_payments_date_idx').on(table.date),
-}));
-
-// ============================================
 // LOAN ACCESS CONTROL
 // ============================================
 
@@ -332,9 +248,6 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
     balances: many(balances),
     transactions: many(transactions),
     loans: many(loans),
-    stokvels: many(stokvels),
-    stokvelMembers: many(stokvelMembers),
-    stokvelPayments: many(stokvelPayments),
     invitations: many(invitations),
     auditLogs: many(auditLogs),
 }));
@@ -344,9 +257,6 @@ export const usersRelations = relations(users, ({ many }) => ({
     balances: many(balances),
     transactions: many(transactions),
     loans: many(loans),
-    stokvels: many(stokvels),
-    stokvelMembers: many(stokvelMembers),
-    stokvelPayments: many(stokvelPayments),
     loanAccess: many(loanAccess, { relationName: 'loanAccessUser' }),
     grantedLoanAccess: many(loanAccess, { relationName: 'loanAccessGrantor' }),
     invitationsSent: many(invitations),
@@ -429,54 +339,6 @@ export const loansRelations = relations(loans, ({ one, many }) => ({
     }),
     transactions: many(transactions),
     accessGrants: many(loanAccess),
-}));
-
-export const stokvelsRelations = relations(stokvels, ({ one, many }) => ({
-    organization: one(organizations, {
-        fields: [stokvels.organizationId],
-        references: [organizations.id],
-    }),
-    user: one(users, {
-        fields: [stokvels.userId],
-        references: [users.id],
-    }),
-    members: many(stokvelMembers),
-    payments: many(stokvelPayments),
-}));
-
-export const stokvelMembersRelations = relations(stokvelMembers, ({ one, many }) => ({
-    stokvel: one(stokvels, {
-        fields: [stokvelMembers.stokvelId],
-        references: [stokvels.id],
-    }),
-    organization: one(organizations, {
-        fields: [stokvelMembers.organizationId],
-        references: [organizations.id],
-    }),
-    user: one(users, {
-        fields: [stokvelMembers.userId],
-        references: [users.id],
-    }),
-    payments: many(stokvelPayments),
-}));
-
-export const stokvelPaymentsRelations = relations(stokvelPayments, ({ one }) => ({
-    stokvel: one(stokvels, {
-        fields: [stokvelPayments.stokvelId],
-        references: [stokvels.id],
-    }),
-    member: one(stokvelMembers, {
-        fields: [stokvelPayments.memberId],
-        references: [stokvelMembers.id],
-    }),
-    organization: one(organizations, {
-        fields: [stokvelPayments.organizationId],
-        references: [organizations.id],
-    }),
-    user: one(users, {
-        fields: [stokvelPayments.userId],
-        references: [users.id],
-    }),
 }));
 
 export const loanAccessRelations = relations(loanAccess, ({ one }) => ({

@@ -21,7 +21,7 @@ const DEMO_PASSWORD = "Admin123";
 const FEATURES = [
     { icon: TrendingUp, label: 'Real-time analytics', desc: 'Live dashboards with loan and transaction insights' },
     { icon: Shield, label: 'Secure & private', desc: 'End-to-end encrypted with role-based access control' },
-    { icon: Zap, label: 'Built for speed', desc: 'Manage loans, stokvels, and accounts in one place' },
+    { icon: Zap, label: 'Built for speed', desc: 'Manage loans and accounts in one place' },
 ];
 
 export default function LoginPage() {
@@ -146,7 +146,7 @@ export default function LoginPage() {
                         </h1>
 
                         <p className="text-gray-400 text-lg leading-relaxed mb-10">
-                            Manage loans, stokvels, and bank accounts — all in one powerful dashboard.
+                            Manage loans and bank accounts — all in one powerful dashboard.
                         </p>
 
                         {/* Feature list */}

@@ -31,7 +31,6 @@ const navigation: Array<{ name: string; href: string; icon: typeof LayoutDashboa
     { name: 'Dashboard', href: '/app', icon: LayoutDashboard, permission: 'canViewDashboard' },
     { name: 'Loans', href: '/app/loans', icon: PiggyBank, permission: 'canViewLoans' },
     { name: 'Transactions', href: '/app/transactions', icon: Receipt, permission: 'canViewTransactions' },
-    { name: 'Stokvel', href: '/app/stokvel', icon: Receipt, permission: 'canViewStokvels' },
     { name: 'Bank Accounts', href: '/app/bank-accounts', icon: Banknote, permission: 'canViewBankAccounts' },
 ];
 

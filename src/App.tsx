@@ -18,8 +18,6 @@ import SettingsPage from './pages/settings';
 import ProfilePage from './pages/profile';
 import ContactSalesPage from './pages/contact-sales';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import StokvelPage from './pages/stokvel';
-import StokvelDetailsPage from './pages/stokvel/details';
 import ScrollToTop from './components/ScrollToTop';
 
 // Create a client
@@ -87,22 +85,6 @@ function AppRoutes() {
           element={(
             <ProtectedRoute requiredPermission="canViewBankAccounts" deniedDescription="Your role does not allow access to bank accounts in this organization.">
               <AccountManagementPage />
-            </ProtectedRoute>
-          )}
-        />
-        <Route
-          path="stokvel"
-          element={(
-            <ProtectedRoute requiredPermission="canViewStokvels" deniedDescription="Your role does not allow access to stokvels in this organization.">
-              <StokvelPage />
-            </ProtectedRoute>
-          )}
-        />
-        <Route
-          path="stokvel/:stokvelId"
-          element={(
-            <ProtectedRoute requiredPermission="canViewStokvels" deniedDescription="Your role does not allow access to stokvel details in this organization.">
-              <StokvelDetailsPage />
             </ProtectedRoute>
           )}
         />

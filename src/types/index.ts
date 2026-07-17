@@ -52,29 +52,6 @@ export enum InvitationStatus {
     EXPIRED = 'EXPIRED'
 }
 
-export enum StokvelFrequency {
-    WEEKLY = 'weekly',
-    MONTHLY = 'monthly',
-    QUARTERLY = 'quarterly'
-}
-
-export enum StokvelStatus {
-    ACTIVE = 'active',
-    COMPLETED = 'completed',
-    PAUSED = 'paused'
-}
-
-export enum StokvelMemberStatus {
-    ACTIVE = 'active',
-    INACTIVE = 'inactive'
-}
-
-export enum StokvelPaymentStatus {
-    PAID = 'paid',
-    PENDING = 'pending',
-    LATE = 'late'
-}
-
 // ============================================
 // BASE ENTITIES
 // ============================================
@@ -121,10 +98,6 @@ export interface OrganizationPermissionSet {
     canViewBankAccounts: boolean;
     canManageBankAccounts: boolean;
     canTransferFunds: boolean;
-    canViewStokvels?: boolean;
-    canManageStokvels: boolean;
-    canAddStokvelMembers: boolean;
-    canRecordStokvelPayments: boolean;
     canManageUsers: boolean;
     canManageSettings: boolean;
     canManageOrg: boolean;
@@ -216,58 +189,6 @@ export interface LoanAccess {
     canDelete: boolean;
     grantedBy: string;
     createdAt: string;
-}
-
-export interface StokvelMember {
-    id: string;
-    stokvelId: string;
-    organizationId: string;
-    userId: string;
-    name: string;
-    email: string | null;
-    phone: string | null;
-    joinedDate: string;
-    totalPaid: string;
-    totalOwed: string;
-    status: StokvelMemberStatus;
-    createdAt: string;
-    updatedAt: string;
-}
-
-export interface StokvelPayment {
-    id: string;
-    stokvelId: string;
-    memberId: string;
-    organizationId: string;
-    userId: string;
-    amount: string;
-    date: string;
-    period: string;
-    status: StokvelPaymentStatus;
-    notes: string | null;
-    createdAt: string;
-    member?: StokvelMember | null;
-    memberName?: string;
-}
-
-export interface Stokvel {
-    id: string;
-    organizationId: string;
-    userId: string;
-    name: string;
-    description: string | null;
-    contributionAmount: string;
-    frequency: StokvelFrequency;
-    startDate: string;
-    targetDate: string;
-    status: StokvelStatus;
-    targetAmount: string | null;
-    totalCollected: string;
-    metadata: Record<string, any>;
-    createdAt: string;
-    updatedAt: string;
-    members: StokvelMember[];
-    payments: StokvelPayment[];
 }
 
 export interface AuditLog {
@@ -378,15 +299,6 @@ export interface LoanResponse {
     message?: string;
 }
 
-export interface StokvelResponse {
-    success: boolean;
-    stokvel?: Stokvel;
-    stokvels?: Stokvel[];
-    member?: StokvelMember;
-    payment?: StokvelPayment;
-    message?: string;
-}
-
 export interface DashboardResponse {
     success: boolean;
     dashboard: {
@@ -472,34 +384,6 @@ export interface LoanPaymentRequest {
     description?: string;
 }
 
-export interface CreateStokvelRequest {
-    name: string;
-    description?: string;
-    contributionAmount: string | number;
-    frequency: StokvelFrequency;
-    startDate: string;
-    targetDate: string;
-    status?: StokvelStatus;
-    targetAmount: string | number;
-    metadata?: Record<string, any>;
-}
-
-export interface AddStokvelMemberRequest {
-    name: string;
-    email?: string;
-    phone?: string;
-    joinedDate: string;
-}
-
-export interface RecordStokvelPaymentRequest {
-    memberId: string;
-    amount: string | number;
-    date: string;
-    period: string;
-    status?: StokvelPaymentStatus;
-    notes?: string;
-}
-
 export interface InviteUserRequest {
     email: string;
     role: UserRole;
@@ -563,10 +447,6 @@ export interface AppPermissionMap {
     canViewBankAccounts: boolean;
     canManageBankAccounts: boolean;
     canTransferFunds: boolean;
-    canViewStokvels: boolean;
-    canManageStokvels: boolean;
-    canAddStokvelMembers: boolean;
-    canRecordStokvelPayments: boolean;
     canManageUsers: boolean;
     canManageSettings: boolean;
     canManageOrg: boolean;
@@ -583,10 +463,6 @@ export const RolePermissions: Record<UserRole, AppPermissionMap> = {
         canViewBankAccounts: true,
         canManageBankAccounts: true,
         canTransferFunds: true,
-        canViewStokvels: true,
-        canManageStokvels: true,
-        canAddStokvelMembers: true,
-        canRecordStokvelPayments: true,
         canManageUsers: true,
         canManageSettings: true,
         canManageOrg: true,
@@ -601,10 +477,6 @@ export const RolePermissions: Record<UserRole, AppPermissionMap> = {
         canViewBankAccounts: true,
         canManageBankAccounts: true,
         canTransferFunds: true,
-        canViewStokvels: true,
-        canManageStokvels: true,
-        canAddStokvelMembers: true,
-        canRecordStokvelPayments: true,
         canManageUsers: true,
         canManageSettings: true,
         canManageOrg: true,
@@ -619,10 +491,6 @@ export const RolePermissions: Record<UserRole, AppPermissionMap> = {
         canViewBankAccounts: true,
         canManageBankAccounts: false,
         canTransferFunds: true,
-        canViewStokvels: true,
-        canManageStokvels: false,
-        canAddStokvelMembers: false,
-        canRecordStokvelPayments: false,
         canManageUsers: true,
         canManageSettings: true,
         canManageOrg: false,
@@ -637,10 +505,6 @@ export const RolePermissions: Record<UserRole, AppPermissionMap> = {
         canViewBankAccounts: true,
         canManageBankAccounts: false,
         canTransferFunds: false,
-        canViewStokvels: true,
-        canManageStokvels: false,
-        canAddStokvelMembers: false,
-        canRecordStokvelPayments: true,
         canManageUsers: false,
         canManageSettings: false,
         canManageOrg: false,
@@ -655,10 +519,6 @@ export const RolePermissions: Record<UserRole, AppPermissionMap> = {
         canViewBankAccounts: false,
         canManageBankAccounts: false,
         canTransferFunds: false,
-        canViewStokvels: false,
-        canManageStokvels: false,
-        canAddStokvelMembers: false,
-        canRecordStokvelPayments: false,
         canManageUsers: false,
         canManageSettings: false,
         canManageOrg: false,

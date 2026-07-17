@@ -23,7 +23,6 @@ export const permissionSections: Array<{
             { key: 'canViewTransactions', label: 'View Transactions', description: 'Open the transactions page and review transaction history.' },
             { key: 'canViewLoans', label: 'View Loans', description: 'Open loans and review borrower balances.' },
             { key: 'canViewBankAccounts', label: 'View Bank Accounts', description: 'Open bank accounts and see balances.' },
-            { key: 'canViewStokvels', label: 'View Stokvels', description: 'Open stokvel pages and member progress.' },
         ],
     },
     {
@@ -33,9 +32,6 @@ export const permissionSections: Array<{
             { key: 'canManageLoans', label: 'Manage Loans', description: 'Create loans, disburse them, and manage loan records.' },
             { key: 'canManageBankAccounts', label: 'Manage Bank Accounts', description: 'Create or remove organization bank accounts.' },
             { key: 'canTransferFunds', label: 'Transfer Funds', description: 'Move money between accounts.' },
-            { key: 'canManageStokvels', label: 'Manage Stokvels', description: 'Create and update stokvel groups.' },
-            { key: 'canAddStokvelMembers', label: 'Add Stokvel Members', description: 'Add members into stokvel groups.' },
-            { key: 'canRecordStokvelPayments', label: 'Record Stokvel Payments', description: 'Capture stokvel contributions and arrears.' },
             { key: 'canManageUsers', label: 'Manage Users', description: 'Invite members, update roles, and assign permissions.' },
             { key: 'canManageSettings', label: 'Manage Settings', description: 'Open settings and configure organization access.' },
         ],
