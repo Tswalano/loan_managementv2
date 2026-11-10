@@ -26,7 +26,7 @@ export const app = new Hono();
 // ============================================
 
 app.use('/*', cors({
-    origin: ['http://localhost:5173', 'https://8bp49x30ql.execute-api.af-south-1.amazonaws.com'],
+    origin: ['http://localhost:5173', 'https://8bp49x30ql.execute-api.af-south-1.amazonaws.com', 'https://main.d5lw4bs1y9ok.amplifyapp.com', 'https://loan-management-alpha.vercel.app'],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
     exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
